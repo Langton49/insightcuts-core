@@ -348,7 +348,7 @@ function wrapText(
   fontsize: number,
   style: "normal" | "bold" | "mono" | "italic" = "normal",
 ): string[] {
-  const words = text.split(" ");
+  const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
 
@@ -529,11 +529,14 @@ function drawtextLines(
 /** Sanitises a string for use inside an FFmpeg filter expression. */
 const safeFilter = (s: string, maxLen: number): string =>
   s
-    .replace(/\\/g, "")       // strip backslashes (avoid accidental escape sequences)
-    .replace(/'/g, "")        // strip single quotes (they close the text='...' value)
-    .replace(/%/g, "%%")      // escape % — FFmpeg drawtext expands %{VARNAME} macros
-    .replace(/:/g, "\\:")     // escape colons (filter graph option separator)
-    .replace(/\[/g, "\\[")    // escape brackets (filter graph stream labels)
+    .replace(/[\r\n\t]+/g, " ") // collapse newlines/tabs — raw \n in drawtext causes FFmpeg to render extra lines at uncontrolled positions
+    .replace(/\s+/g, " ")       // collapse multiple spaces produced by the above
+    .trim()
+    .replace(/\\/g, "")         // strip backslashes (avoid accidental escape sequences)
+    .replace(/'/g, "")          // strip single quotes (they close the text='...' value)
+    .replace(/%/g, "%%")        // escape % — FFmpeg drawtext expands %{VARNAME} macros
+    .replace(/:/g, "\\:")       // escape colons (filter graph option separator)
+    .replace(/\[/g, "\\[")      // escape brackets (filter graph stream labels)
     .replace(/\]/g, "\\]")
     .slice(0, maxLen);
 
