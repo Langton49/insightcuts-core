@@ -61,7 +61,7 @@
 /* Drag handles */
 .handleLeft,
 .handleRight {
-  width: 8px;
+  width: 12px;
   flex-shrink: 0;
   background: #e85d26;
   cursor: col-resize;
@@ -69,6 +69,14 @@
   position: relative;
   z-index: 2;
   transition: background 0.1s;
+}
+
+/* Extended hit area — makes handles easier to grab */
+.handleLeft::before,
+.handleRight::before {
+  content: '';
+  position: absolute;
+  inset: 0 -8px;
 }
 
 .handleLeft:hover,
@@ -92,6 +100,7 @@
   height: 12px;
   background: rgba(255, 255, 255, 0.6);
   border-radius: 1px;
+  pointer-events: none;
 }
 
 /* Playhead */

@@ -94,35 +94,51 @@ export function ClipScrubber({ clip, allClips, playheadPct, onResizeClip, onSeek
         rightWall,
         sourceDuration,
       }
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
     },
     [clip, allClips, sourceDuration],
   )
 
   useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
-      const drag = dragRef.current
-      if (!drag) return
-      const deltaX = e.clientX - drag.startX
-      const deltaSeconds = (deltaX / drag.trackWidth) * drag.sourceDuration
+    let rafId: number | null = null
 
-      if (drag.type === 'left') {
-        const fixedEnd = drag.originalStart + drag.originalDuration
-        const newStart = Math.max(
-          drag.leftWall,
-          Math.min(fixedEnd - MIN_DURATION, drag.originalStart + deltaSeconds),
-        )
-        onResizeClipRef.current(newStart, fixedEnd - newStart)
-      } else {
-        const newDuration = Math.max(
-          MIN_DURATION,
-          Math.min(drag.rightWall - drag.originalStart, drag.originalDuration + deltaSeconds),
-        )
-        onResizeClipRef.current(drag.originalStart, newDuration)
-      }
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current) return
+      const clientX = e.clientX
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        const drag = dragRef.current
+        if (!drag) return
+        const deltaX = clientX - drag.startX
+        const deltaSeconds = (deltaX / drag.trackWidth) * drag.sourceDuration
+
+        if (drag.type === 'left') {
+          const fixedEnd = drag.originalStart + drag.originalDuration
+          const newStart = Math.max(
+            drag.leftWall,
+            Math.min(fixedEnd - MIN_DURATION, drag.originalStart + deltaSeconds),
+          )
+          onResizeClipRef.current(newStart, fixedEnd - newStart)
+        } else {
+          const newDuration = Math.max(
+            MIN_DURATION,
+            Math.min(drag.rightWall - drag.originalStart, drag.originalDuration + deltaSeconds),
+          )
+          onResizeClipRef.current(drag.originalStart, newDuration)
+        }
+      })
     }
 
     const onMouseUp = () => {
       dragRef.current = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
     }
 
     document.addEventListener('mousemove', onMouseMove)
@@ -130,6 +146,7 @@ export function ClipScrubber({ clip, allClips, playheadPct, onResizeClip, onSeek
     return () => {
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
+      if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, []) // empty deps — onResizeClipRef.current is always current without re-registering
 
