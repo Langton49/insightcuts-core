@@ -320,7 +320,6 @@ export async function generatePodcastScript(ctx: PodcastScriptContext): Promise<
   const prompt = `You are writing a podcast script that will be read aloud by a text-to-speech voice. Write a complete, natural-sounding podcast episode based on the following research material.
 
 Project: "${ctx.projectTitle}"
-Research focus: "${ctx.gestureQuery}"
 
 Detected video moments:
 ${clipSummaries}
@@ -348,7 +347,7 @@ Writing style requirements — this will be read aloud by TTS, so:
     model: "gpt-5.2",
     messages: [{ role: "user", content: prompt }],
     temperature: 0.75,
-    max_completion_tokens: 2500,
+    max_completion_tokens: 4000,
   });
 
   return response.choices[0]?.message?.content?.trim() ?? "";
