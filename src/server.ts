@@ -42,6 +42,7 @@ import { extractText } from "./services/document-extractor.js";
 import { extractInsights, generateClipNarration, generatePodcastScript } from "./services/openai.js";
 import { generateAudio } from "./services/elevenlabs.js";
 import { addPodcastIntroOutro } from "./services/ffmpeg.js";
+import { getSlackToken, getSlackWorkspace, saveSlackAuth, clearSlackAuth, listChannels, uploadFileAndPost, generateShareMessage } from "./services/slack.js";
 import type { PipelineConfig, DetectionResult, AssemblyResult, ExtractedInsight } from "./types.js";
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -725,6 +726,101 @@ app.post("/api/jobs/:id/podcast/script", async (req, res) => {
     });
     res.json({ script });
   } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ─── Slack OAuth + sharing ────────────────────────────────────────────────────
+
+app.get("/api/slack/status", (_req, res) => {
+  const token = getSlackToken();
+  if (!token) { res.json({ connected: false }); return; }
+  res.json({ connected: true, workspace: getSlackWorkspace() });
+});
+
+app.get("/api/slack/connect", (req, res) => {
+  const clientId = process.env.SLACK_CLIENT_ID;
+  if (!clientId) { res.status(500).json({ error: "SLACK_CLIENT_ID not configured" }); return; }
+  const redirectUri = process.env.SLACK_REDIRECT_URI ?? `${req.protocol}://${req.get("host")}/api/slack/callback`;
+  const scopes = "files:write,chat:write,channels:read,groups:read";
+  res.redirect(`https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}`);
+});
+
+app.get("/api/slack/callback", async (req, res) => {
+  const { code, error } = req.query as { code?: string; error?: string };
+  if (error || !code) { res.redirect("/?slack=error"); return; }
+  const clientId     = process.env.SLACK_CLIENT_ID ?? "";
+  const clientSecret = process.env.SLACK_CLIENT_SECRET ?? "";
+  const redirectUri  = process.env.SLACK_REDIRECT_URI ?? `${req.protocol}://${req.get("host")}/api/slack/callback`;
+  try {
+    const resp = await fetch("https://slack.com/api/oauth.v2.access", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri }),
+    });
+    const data = await resp.json() as { ok: boolean; access_token?: string; team?: { id: string; name: string }; error?: string };
+    if (!data.ok || !data.access_token || !data.team) {
+      console.error("[Slack] OAuth failed:", data.error);
+      res.redirect("/?slack=error"); return;
+    }
+    saveSlackAuth({ access_token: data.access_token, team: data.team });
+    res.redirect("/?slack=connected");
+  } catch (err) {
+    console.error("[Slack] OAuth callback error:", err);
+    res.redirect("/?slack=error");
+  }
+});
+
+app.get("/api/slack/channels", async (_req, res) => {
+  const token = getSlackToken();
+  if (!token) { res.status(401).json({ error: "Slack not connected" }); return; }
+  try {
+    res.json({ channels: await listChannels(token) });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.delete("/api/slack/disconnect", (_req, res) => {
+  clearSlackAuth();
+  res.json({ ok: true });
+});
+
+app.post("/api/jobs/:id/share/brief", async (req, res) => {
+  const job = jobs.get(req.params.id);
+  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+  const briefPath = job.assembly?.briefPath;
+  if (!briefPath || !fs.existsSync(briefPath)) { res.status(400).json({ error: "Brief not ready" }); return; }
+  const token = getSlackToken();
+  if (!token) { res.status(401).json({ error: "Slack not connected" }); return; }
+  const { channelId } = req.body as { channelId?: string };
+  if (!channelId) { res.status(400).json({ error: "channelId required" }); return; }
+  try {
+    const clipCount = job.assembly?.clips?.length ?? 0;
+    const message = await generateShareMessage(job.config.title ?? "InsightCuts Brief", job.config.gestureQuery, clipCount, "brief");
+    const fileId = await uploadFileAndPost(token, channelId, briefPath, message, `${(job.config.title ?? "brief").replace(/\s+/g, "-")}.mp4`);
+    res.json({ ok: true, fileId });
+  } catch (err) {
+    console.error("[Slack] Share brief failed:", err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post("/api/jobs/:id/share/podcast", async (req, res) => {
+  const job = jobs.get(req.params.id);
+  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+  const podcastPath = job.assembly?.podcastPath ?? (job as unknown as Record<string, string>).standalonePodcastPath;
+  if (!podcastPath || !fs.existsSync(podcastPath)) { res.status(400).json({ error: "Podcast not ready" }); return; }
+  const token = getSlackToken();
+  if (!token) { res.status(401).json({ error: "Slack not connected" }); return; }
+  const { channelId } = req.body as { channelId?: string };
+  if (!channelId) { res.status(400).json({ error: "channelId required" }); return; }
+  try {
+    const message = await generateShareMessage(job.config.title ?? "InsightCuts Podcast", job.config.gestureQuery, 0, "podcast");
+    const fileId = await uploadFileAndPost(token, channelId, podcastPath, message, `${(job.config.title ?? "podcast").replace(/\s+/g, "-")}.mp3`);
+    res.json({ ok: true, fileId });
+  } catch (err) {
+    console.error("[Slack] Share podcast failed:", err);
     res.status(500).json({ error: (err as Error).message });
   }
 });

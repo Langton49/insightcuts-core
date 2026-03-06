@@ -141,3 +141,158 @@
   text-align: center;
   padding: 16px 0;
 }
+
+/* ── Layout helpers ─────────────────────────────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.divider {
+  height: 1px;
+  background: #e8e8e8;
+}
+
+/* ── Slack ──────────────────────────────────────────────────────────────────── */
+
+.connectBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #4A154B;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  align-self: flex-start;
+}
+
+.connectBtn:hover {
+  background: #611f69;
+}
+
+.slackConnected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connectedDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2EB67D;
+  flex-shrink: 0;
+}
+
+.connectedText {
+  font-size: 14px;
+  color: #111;
+  font-weight: 500;
+  flex: 1;
+}
+
+.disconnectBtn {
+  font-size: 12px;
+  color: #999;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.disconnectBtn:hover {
+  color: #555;
+  background: #f0f0f0;
+}
+
+.channelPicker {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111;
+  background: #fafafa;
+  cursor: pointer;
+  outline: none;
+}
+
+.channelPicker:focus {
+  border-color: #4A154B;
+}
+
+.shareButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.shareBtn {
+  flex: 1;
+  padding: 9px 12px;
+  background: #4A154B;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.shareBtn:hover:not(:disabled) {
+  background: #611f69;
+}
+
+.shareBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.slackLoading {
+  font-size: 13px;
+  color: #aaa;
+}
+
+.shareSuccess {
+  font-size: 13px;
+  color: #2EB67D;
+  font-weight: 500;
+}
+
+.shareError {
+  font-size: 13px;
+  color: #D0021B;
+}
+
+.downloadAllBtn {
+  align-self: flex-end;
+  padding: 7px 16px;
+  background: #EA580C;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.downloadAllBtn:hover {
+  background: #F97316;
+}

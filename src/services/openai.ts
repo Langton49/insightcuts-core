@@ -86,7 +86,8 @@ Requirements:
 // ─── Insight extraction ───────────────────────────────────────────────────────
 
 /**
- * Extracts 5-10 key research findings from document text using gpt-5.2.
+ * Extracts 15 key research findings from document text using gpt-5.2,
+ * ranked from most insightful to least.
  * Returns an array of ExtractedInsight objects the user can link to clips.
  */
 export async function extractInsights(
@@ -95,20 +96,22 @@ export async function extractInsights(
 ): Promise<ExtractedInsight[]> {
   const client = getClient();
 
-  const prompt = `You are analyzing a UX research document. Extract 5-10 distinct, actionable research findings from the text below.
+  const prompt = `You are analyzing a UX research document. Extract exactly 15 distinct, actionable research findings from the text below.
 
 Each finding should be:
 - A single concrete observation, behaviour, or data point (1-2 sentences)
 - Specific enough to connect to a particular moment in a video recording
 - Written in plain English without jargon
 
+Rank the findings from most insightful to least insightful. Put the most surprising, impactful, or non-obvious findings first. Put more generic or expected observations last.
+
 Document source: "${sourceLabel}"
 
 Document text:
 ${documentText}
 
-Return a JSON object with an "insights" array. Each element must have:
-- "id": a short slug (e.g. "finding-1")
+Return a JSON object with an "insights" array of exactly 15 elements, ordered from most to least insightful. Each element must have:
+- "id": a short slug (e.g. "finding-1" through "finding-15")
 - "text": the finding in 1-2 sentences
 - "source": the document filename "${sourceLabel}"
 
@@ -120,7 +123,7 @@ Return ONLY valid JSON, no other text.`;
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_completion_tokens: 1500,
+      max_completion_tokens: 2500,
     });
 
     const raw = response.choices[0]?.message?.content ?? "{}";

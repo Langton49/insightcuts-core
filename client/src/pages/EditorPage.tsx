@@ -168,7 +168,7 @@ export function EditorPage() {
     fetchJob(jobId)
       .then(data => {
         if (data.editorClips?.length) {
-          let adjacent = makeAdjacent(data.editorClips)
+          let adjacent = makeAdjacent(data.editorClips.slice(0, 5))
           // Restore persisted clip edits (selections + boundary trims)
           try {
             const saved = localStorage.getItem(`insightcuts-clips-${jobId}`)
@@ -494,7 +494,13 @@ export function EditorPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <EditorTopNav onShare={() => setShowShareModal(true)} />
+      <EditorTopNav
+        onShare={() => setShowShareModal(true)}
+        onGenerateBrief={handleGenerateBrief}
+        isAssembling={isAssembling}
+        briefUrl={briefUrl}
+        selectedCount={selectedCount}
+      />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Video section */}
@@ -642,109 +648,6 @@ export function EditorPage() {
             />
           )}
 
-          {/* Generate Brief bar */}
-          {clips.length > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                height: 48,
-                background: '#fafafa',
-                borderTop: '1px solid #e8e8e8',
-                padding: '0 16px',
-                gap: 12,
-                flexShrink: 0,
-              }}
-            >
-              {/* Selection counter */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: selectedCount > 0 ? '#e85d26' : '#ccc',
-                    flexShrink: 0,
-                    transition: 'background 0.2s',
-                  }}
-                />
-                <span style={{ fontSize: 13, color: '#555' }}>
-                  {selectedCount} of {clips.length} clip{clips.length !== 1 ? 's' : ''} selected
-                </span>
-              </div>
-
-              <div style={{ flex: 1 }} />
-
-              {/* Brief ready state */}
-              {briefUrl && !isAssembling && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, animation: 'fadeIn 0.25s ease' }}>
-                  <span style={{ fontSize: 13, color: '#28a745', fontWeight: 600 }}>
-                    Brief ready
-                  </span>
-                  <a
-                    href={briefUrl}
-                    download="brief.mp4"
-                    style={{
-                      padding: '6px 14px',
-                      background: '#fff',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: 7,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: '#333',
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 5,
-                    }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 3v13M5 14l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Download
-                  </a>
-                </div>
-              )}
-
-              {/* Generate Brief button */}
-              <button
-                onClick={handleGenerateBrief}
-                disabled={selectedCount === 0 || isAssembling}
-                style={{
-                  padding: '7px 16px',
-                  background: selectedCount > 0 && !isAssembling ? '#e85d26' : '#e0e0e0',
-                  color: selectedCount > 0 && !isAssembling ? '#fff' : '#aaa',
-                  border: 'none',
-                  borderRadius: 7,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: selectedCount > 0 && !isAssembling ? 'pointer' : 'default',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'background 0.15s',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {isAssembling ? (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray="40 20" />
-                    </svg>
-                    Assembling…
-                  </>
-                ) : (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 3l14 9-14 9V3z" fill="currentColor" />
-                    </svg>
-                    Generate Brief
-                  </>
-                )}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Side panels — width transition handles smooth open and close */}
@@ -831,7 +734,13 @@ export function EditorPage() {
       </div>
 
       {showShareModal && (
-        <ShareModal jobId={jobId} clips={clips} onClose={() => setShowShareModal(false)} />
+        <ShareModal
+          jobId={jobId}
+          clips={clips}
+          hasBrief={!!briefUrl}
+          hasPodcast={!!podcastDownloadUrl}
+          onClose={() => setShowShareModal(false)}
+        />
       )}
     </div>
   )

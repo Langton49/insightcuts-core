@@ -3,9 +3,13 @@ import styles from './EditorTopNav.module.css'
 
 interface Props {
   onShare: () => void
+  onGenerateBrief: () => void
+  isAssembling: boolean
+  briefUrl: string | null
+  selectedCount: number
 }
 
-export function EditorTopNav({ onShare }: Props) {
+export function EditorTopNav({ onShare, onGenerateBrief, isAssembling, briefUrl, selectedCount }: Props) {
   return (
     <nav className={styles.nav}>
       <Link to="/" className={styles.logo}>
@@ -13,6 +17,38 @@ export function EditorTopNav({ onShare }: Props) {
         <span className={styles.logoText}>InsightCuts</span>
       </Link>
       <div className={styles.right}>
+        {briefUrl && !isAssembling && (
+          <>
+            <span className={styles.briefReady}>Brief ready</span>
+            <a href={briefUrl} download="brief.mp4" className={styles.downloadBtn}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3v13M5 14l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Download
+            </a>
+          </>
+        )}
+        <button
+          className={styles.generateBriefBtn}
+          onClick={onGenerateBrief}
+          disabled={selectedCount === 0 || isAssembling}
+        >
+          {isAssembling ? (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray="40 20" />
+              </svg>
+              Assembling…
+            </>
+          ) : (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                <path d="M5 3l14 9-14 9V3z" fill="currentColor" />
+              </svg>
+              Generate Brief
+            </>
+          )}
+        </button>
         <button className={styles.shareBtn} onClick={onShare}>
           Share
         </button>

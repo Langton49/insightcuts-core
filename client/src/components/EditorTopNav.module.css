@@ -58,6 +58,60 @@
   background: rgba(249, 115, 22, 0.12);
 }
 
+.generateBriefBtn {
+  height: 34px;
+  padding: 0 16px;
+  background: #EA580C;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.generateBriefBtn:hover:not(:disabled) {
+  background: #F97316;
+}
+
+.generateBriefBtn:disabled {
+  background: #e0e0e0;
+  color: #aaa;
+  cursor: default;
+}
+
+.briefReady {
+  font-size: 13px;
+  font-weight: 600;
+  color: #28a745;
+}
+
+.downloadBtn {
+  height: 34px;
+  padding: 0 14px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: border-color 0.15s;
+}
+
+.downloadBtn:hover {
+  border-color: #aaa;
+}
+
 .avatar {
   width: 32px;
   height: 32px;

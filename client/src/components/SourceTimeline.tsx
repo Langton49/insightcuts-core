@@ -267,16 +267,6 @@ export function SourceTimeline({
     [sourceDuration, onSeek],
   )
 
-  const handleZoomedClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!zoomedRef.current || windowDuration <= 0) return
-      const rect = zoomedRef.current.getBoundingClientRect()
-      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-      onSeek(windowStart + pct * windowDuration)
-    },
-    [windowStart, windowDuration, onSeek],
-  )
-
   const hasFilmstrip = trackFrames.length > 0
 
   return (
@@ -339,7 +329,7 @@ export function SourceTimeline({
         <div
           ref={zoomedRef}
           className={`${styles.track} ${isDraggingMove ? styles.trackDragging : ''}`}
-          onClick={handleZoomedClick}
+
         >
           {hasFilmstrip && windowDuration > 0 && sourceDuration > 0 && (
             <div

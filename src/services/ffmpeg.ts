@@ -666,6 +666,67 @@ function buildOverlayFilters(
 }
 
 /**
+ * Generates a standalone insight card video used as the leading segment
+ * in a sequential layout. Dimensions must match the clip to allow concat.
+ */
+async function generateInsightCard(
+  outputPath: string,
+  insightText: string,
+  labelText: string,
+  durationSeconds: number,
+  VW: number,
+  VH: number,
+): Promise<void> {
+  ensureDir(path.dirname(outputPath));
+  const m = scaledMetrics(VH);
+  const textMaxPx = VW - 160;
+
+  const insightLines = wrapText(safeFilter(insightText, 600), textMaxPx, m.fsMain, "bold").slice(0, 6);
+  const labelLines   = wrapText(safeFilter(labelText, 120),   textMaxPx, m.fsLabel, "mono").slice(0, 2);
+
+  const insightBoxH = insightLines.length * m.lhMain  + m.padYMain  * 2;
+  const labelBoxH   = labelLines.length   * m.lhLabel + m.padYLabel * 2;
+  const totalH      = insightBoxH + m.gap * 2 + labelBoxH;
+  const blockTopY   = Math.floor((VH - totalH) / 2);
+  const labelTopY   = blockTopY + insightBoxH + m.gap * 2;
+
+  const filters: string[] = [
+    `drawbox=x=0:y=0:w=${VW}:h=${VH}:color=0x000E24FF:t=fill`,
+    `drawbox=x=${Math.round(VW * 0.06)}:y=${blockTopY - m.gap}:w=${Math.round(VW * 0.88)}:h=${m.accentH}:color=0x3A7BD5CC:t=fill`,
+    ...centeredTextBox({
+      lines: insightLines, fontsize: m.fsMain, fontcolor: "0xEFF4FA",
+      lineHeight: m.lhMain, font: "bold", boxColor: "0x00000000",
+      padX: m.padXMain, padY: m.padYMain,
+      regionX: 0, regionY: blockTopY, regionW: VW, regionH: insightBoxH,
+    }),
+    `drawbox=x=${Math.round(VW * 0.06)}:y=${labelTopY - m.gap}:w=${Math.round(VW * 0.44)}:h=${m.accentH}:color=0x3A7BD544:t=fill`,
+    ...centeredTextBox({
+      lines: labelLines, fontsize: m.fsLabel, fontcolor: "0x7A9CC0",
+      lineHeight: m.lhLabel, font: "mono", boxColor: "0x00000000",
+      padX: m.padXLabel, padY: m.padYLabel,
+      regionX: 0, regionY: labelTopY, regionW: VW, regionH: labelBoxH,
+    }),
+    `drawtext=text='InsightCuts':fontsize=${m.fsLabel}:fontcolor=0x4DA3FF:x=${VW - Math.round(VW * 0.1)}:y=${VH - Math.round(VH * 0.05)}`,
+  ];
+
+  return new Promise((resolve, reject) => {
+    ffmpeg()
+      .input(`color=c=0x000E24:size=${VW}x${VH}:duration=${durationSeconds}:rate=30`)
+      .inputFormat("lavfi")
+      .input("anullsrc=channel_layout=stereo:sample_rate=44100")
+      .inputFormat("lavfi")
+      .videoFilters(filters)
+      .videoCodec("libx264")
+      .audioCodec("aac")
+      .outputOptions(["-preset fast", "-t", String(durationSeconds)])
+      .output(outputPath)
+      .on("end", () => resolve())
+      .on("error", reject)
+      .run();
+  });
+}
+
+/**
  * Extracts a clip from `videoPath` and applies the layout overlay in a single
  * FFmpeg pass, eliminating the quality loss of a double re-encode.
  */
@@ -680,6 +741,37 @@ export async function extractClipWithOverlay(
   insightText?: string,
 ): Promise<void> {
   ensureDir(path.dirname(outputPath));
+
+  if (layout === "sequential") {
+    const tmpDir = path.dirname(outputPath);
+    const base = `_seq_${Date.now()}`;
+    const cardPath = path.join(tmpDir, `${base}_card.mp4`);
+    const clipPath = path.join(tmpDir, `${base}_clip.mp4`);
+    const { width: VW, height: VH } = await getVideoDimensions(videoPath);
+    const cardText = insightText?.trim() || mainText;
+    const cardDuration = Math.min(8, Math.max(3, 3 + cardText.length * 0.04));
+    try {
+      await generateInsightCard(cardPath, cardText, labelText, cardDuration, VW, VH);
+      await extractClip(videoPath, startTime, duration, clipPath);
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg()
+          .input(cardPath)
+          .input(clipPath)
+          .complexFilter("[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]")
+          .outputOptions(["-map [v]", "-map [a]", "-c:v libx264", "-c:a aac", "-preset fast", "-crf 23"])
+          .output(outputPath)
+          .on("end", () => resolve())
+          .on("error", reject)
+          .run();
+      });
+    } finally {
+      for (const f of [cardPath, clipPath]) {
+        try { fs.unlinkSync(f); } catch { /* ignore */ }
+      }
+    }
+    return;
+  }
+
   const { width: VW, height: VH } = await getVideoDimensions(videoPath);
   const videoFilters = buildOverlayFilters(
     VW, VH, layout,
@@ -716,6 +808,32 @@ export async function addLayoutOverlay(
   insightText?: string,
 ): Promise<void> {
   ensureDir(path.dirname(outputPath));
+
+  if (layout === "sequential") {
+    const tmpDir = path.dirname(outputPath);
+    const cardPath = path.join(tmpDir, `_seq_${Date.now()}_card.mp4`);
+    const { width: VW, height: VH } = await getVideoDimensions(inputPath);
+    const cardText = insightText?.trim() || mainText;
+    const cardDuration = Math.min(8, Math.max(3, 3 + cardText.length * 0.04));
+    try {
+      await generateInsightCard(cardPath, cardText, labelText, cardDuration, VW, VH);
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg()
+          .input(cardPath)
+          .input(inputPath)
+          .complexFilter("[0:v][0:a][1:v][1:a]concat=n=2:v=1:a=1[v][a]")
+          .outputOptions(["-map [v]", "-map [a]", "-c:v libx264", "-c:a aac", "-preset fast", "-crf 23"])
+          .output(outputPath)
+          .on("end", () => resolve())
+          .on("error", reject)
+          .run();
+      });
+    } finally {
+      try { fs.unlinkSync(cardPath); } catch { /* ignore */ }
+    }
+    return;
+  }
+
   const { width: VW, height: VH } = await getVideoDimensions(inputPath);
   const videoFilters = buildOverlayFilters(
     VW, VH, layout,
