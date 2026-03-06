@@ -17,6 +17,7 @@ interface Props {
   onUpdateScript: (text: string) => void
   onVoiceChange: (voiceId: string) => void
   onGeneratePodcast: () => void
+  onShare?: () => void
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ export function PodcastPanel({
   onUpdateScript,
   onVoiceChange,
   onGeneratePodcast,
+  onShare,
 }: Props) {
   return (
     <div className={styles.panel}>
@@ -99,19 +101,30 @@ export function PodcastPanel({
             </div>
           </div>
 
-          {/* Download link once rendered */}
+          {/* Download + Share once rendered */}
           {downloadUrl && !rendering && (
-            <a
-              href={downloadUrl}
-              download="podcast.mp3"
-              className={styles.primaryBtn}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', textDecoration: 'none' }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <path d="M12 3v13M5 14l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Download podcast
-            </a>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <a
+                href={downloadUrl}
+                download="podcast.mp3"
+                className={styles.primaryBtn}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', textDecoration: 'none' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3v13M5 14l7 7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Download
+              </a>
+              {onShare && (
+                <button
+                  className={styles.primaryBtn}
+                  style={{ flex: 1 }}
+                  onClick={onShare}
+                >
+                  Share
+                </button>
+              )}
+            </div>
           )}
 
           {/* Error */}

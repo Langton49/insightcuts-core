@@ -743,6 +743,7 @@ export function EditorPage() {
               onUpdateScript={setPodcastScript}
               onVoiceChange={setPodcastVoice}
               onGeneratePodcast={handleRenderPodcast}
+              onShare={() => setShowShareModal(true)}
             />
           )}
           {activePanel === 'layouts' && (
@@ -772,8 +773,8 @@ export function EditorPage() {
         <ShareModal
           jobId={jobId}
           clips={clips}
-          hasBrief={!!briefUrl}
-          hasPodcast={!!podcastDownloadUrl}
+          briefUrl={briefUrl}
+          podcastUrl={podcastDownloadUrl}
           onClose={() => setShowShareModal(false)}
         />
       )}

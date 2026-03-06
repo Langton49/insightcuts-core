@@ -22,12 +22,12 @@ interface Channel {
 interface Props {
   jobId: string
   clips: EditorClip[]
-  hasBrief: boolean
-  hasPodcast: boolean
+  briefUrl: string | null
+  podcastUrl: string | null
   onClose: () => void
 }
 
-export function ShareModal({ jobId, clips, hasBrief, hasPodcast, onClose }: Props) {
+export function ShareModal({ jobId, clips, briefUrl, podcastUrl, onClose }: Props) {
   const selected = clips.filter(c => c.selected)
 
   // ── Email state ──────────────────────────────────────────────────────────────
@@ -174,6 +174,40 @@ export function ShareModal({ jobId, clips, hasBrief, hasPodcast, onClose }: Prop
           )}
         </div>
 
+        {/* ── Export brief / podcast ───────────────────────────────────────── */}
+        {(briefUrl || podcastUrl) && (
+          <>
+            <div className={styles.divider} />
+            <div className={styles.section}>
+              <div className={styles.sectionLabel}>Export</div>
+              <ul className={styles.list}>
+                {briefUrl && (
+                  <li className={styles.item}>
+                    <div>
+                      <div className={styles.itemLabel}>Brief</div>
+                      <div className={styles.itemMeta}>MP4 video</div>
+                    </div>
+                    <a href={briefUrl} download="brief.mp4" className={styles.downloadLink}>
+                      Download
+                    </a>
+                  </li>
+                )}
+                {podcastUrl && (
+                  <li className={styles.item}>
+                    <div>
+                      <div className={styles.itemLabel}>Podcast</div>
+                      <div className={styles.itemMeta}>MP3 audio</div>
+                    </div>
+                    <a href={podcastUrl} download="podcast.mp3" className={styles.downloadLink}>
+                      Download
+                    </a>
+                  </li>
+                )}
+              </ul>
+            </div>
+          </>
+        )}
+
         {/* ── Share to Slack ───────────────────────────────────────────────── */}
         <div className={styles.divider} />
         <div className={styles.section}>
@@ -209,17 +243,17 @@ export function ShareModal({ jobId, clips, hasBrief, hasPodcast, onClose }: Prop
               <div className={styles.shareButtons}>
                 <button
                   className={styles.shareBtn}
-                  disabled={!hasBrief || !selectedChannel || sharing !== null}
+                  disabled={!briefUrl || !selectedChannel || sharing !== null}
                   onClick={() => handleShare('brief')}
-                  title={hasBrief ? undefined : 'Generate a brief first'}
+                  title={briefUrl ? undefined : 'Generate a brief first'}
                 >
                   {sharing === 'brief' ? 'Uploading…' : 'Share Brief'}
                 </button>
                 <button
                   className={styles.shareBtn}
-                  disabled={!hasPodcast || !selectedChannel || sharing !== null}
+                  disabled={!podcastUrl || !selectedChannel || sharing !== null}
                   onClick={() => handleShare('podcast')}
-                  title={hasPodcast ? undefined : 'Generate a podcast first'}
+                  title={podcastUrl ? undefined : 'Generate a podcast first'}
                 >
                   {sharing === 'podcast' ? 'Uploading…' : 'Share Podcast'}
                 </button>
