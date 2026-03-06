@@ -118,6 +118,13 @@ export interface ExtractedClip {
   clipDuration: number;
   /** Absolute path to the per-clip narration MP3 (if narration was generated) */
   narrationPath?: string;
+  /** Layout applied to this clip during extraction */
+  layout?: string;
+  /** Insight text used in this clip's overlay or card */
+  insightText?: string;
+  /** For sequential layout: path to the bare extracted clip (no card prepended).
+   *  Used in the narration step to build [narrated-card + original-audio-clip]. */
+  rawClipPath?: string;
 }
 
 export interface AssemblyResult {

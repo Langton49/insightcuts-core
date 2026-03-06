@@ -4,10 +4,12 @@ import { fileURLToPath } from "url";
 import { ensureIndex, uploadVideo, searchGestures, getVideoTranscript } from "./services/twelve-labs.js";
 import {
   extractClipWithOverlay,
+  generateInsightCard,
   generateTitleCard,
   generateOutroCard,
   concatenateClips,
   getVideoDuration,
+  getVideoDimensions,
   replaceAudio,
   mixBackgroundMusic,
   addPodcastIntroOutro,
@@ -235,10 +237,15 @@ export async function runAssembly(
     const layout      = config.clipLayouts?.[origIndex] ?? config.globalLayout ?? "bottom-top";
     const insightText = config.clipInsights?.[origIndex]?.[0];
 
-    console.log(`  [${i + 1}/${resolvedMatches.length}] ${ts} (${clipDuration.toFixed(1)}s) [${layout}]`);
-    await extractClipWithOverlay(config.videoPath, clipStart, clipDuration, overlaidPath, layout, "", "", insightText);
+    // For sequential: keep the bare clip so Step 2 can attach narration to the card only
+    const rawClipPath = layout === "sequential"
+      ? path.join(clipsDir, `raw_clip_${i}.mp4`)
+      : undefined;
 
-    clips.push({ index: origIndex, match, rawPath: overlaidPath, overlaidPath, clipStart, clipDuration });
+    console.log(`  [${i + 1}/${resolvedMatches.length}] ${ts} (${clipDuration.toFixed(1)}s) [${layout}]`);
+    await extractClipWithOverlay(config.videoPath, clipStart, clipDuration, overlaidPath, layout, "", "", insightText, rawClipPath);
+
+    clips.push({ index: origIndex, match, rawPath: overlaidPath, overlaidPath, clipStart, clipDuration, layout, insightText, rawClipPath });
   }
 
   // ─── Step 2: AI narration ────────────────────────────────────────────────────
@@ -282,27 +289,45 @@ export async function runAssembly(
       console.log(`  [${i + 1}/${clips.length}] Generating audio (${script.split(/\s+/).length} words)...`);
       await generateAudio(script, narrationPath, config.narrationVoice);
 
-      // ── Extend clip if narration overruns it ───────────────────────────────
       const narrationDuration = await getVideoDuration(narrationPath).catch(() => clip.clipDuration);
-      let overlaidForMix = clip.overlaidPath;
       let finalClipDuration = clip.clipDuration;
 
-      if (narrationDuration > clip.clipDuration + 0.3) {
-        // Clamp to the video's actual end
-        const extDuration = Math.min(videoDuration - clip.clipStart, narrationDuration + 0.1);
-        console.log(
-          `  [${i + 1}/${clips.length}] Narration (${narrationDuration.toFixed(1)}s) > clip (${clip.clipDuration.toFixed(1)}s) — extending to ${extDuration.toFixed(1)}s...`
-        );
-        const extOverlaidPath = path.join(clipsDir, `overlaid_ext_${i}.mp4`);
-        const extLayout = config.clipLayouts?.[clip.index] ?? config.globalLayout ?? "bottom-top";
-        const extInsightText = config.clipInsights?.[clip.index]?.[0];
-        await extractClipWithOverlay(config.videoPath, clip.clipStart, extDuration, extOverlaidPath, extLayout, "", "", extInsightText);
-        overlaidForMix = extOverlaidPath;
-        finalClipDuration = extDuration;
-      }
-
       console.log(`  [${i + 1}/${clips.length}] Mixing narration into clip...`);
-      await replaceAudio(overlaidForMix, narrationPath, narratedPath);
+
+      if (clip.layout === "sequential" && clip.rawClipPath && fs.existsSync(clip.rawClipPath)) {
+        // ── Sequential: narration plays over the card; clip plays with original audio ──
+        // Card duration = max(formula, narration length) so narration always fits
+        const cardText = clip.insightText?.trim() ?? "";
+        const minCardDur = Math.min(8, Math.max(3, 3 + cardText.length * 0.04));
+        const cardDuration = Math.max(minCardDur, narrationDuration + 0.2);
+        const { width: VW, height: VH } = await getVideoDimensions(clip.rawClipPath);
+        const narratedCardPath = path.join(clipsDir, `narrated_card_${i}.mp4`);
+        await generateInsightCard(narratedCardPath, cardText, "", cardDuration, VW, VH, narrationPath);
+        // Concat [narrated card + original-audio clip]
+        const listPath = path.join(clipsDir, `seq_list_${i}.txt`);
+        await concatenateClips([narratedCardPath, clip.rawClipPath], narratedPath, listPath);
+        try { fs.unlinkSync(narratedCardPath); } catch { /* ignore */ }
+        finalClipDuration = cardDuration + clip.clipDuration;
+      } else {
+        // ── All other layouts: narration replaces the full clip audio ──────────────────
+        let overlaidForMix = clip.overlaidPath;
+
+        if (narrationDuration > clip.clipDuration + 0.3) {
+          // Extend clip if narration overruns it
+          const extDuration = Math.min(videoDuration - clip.clipStart, narrationDuration + 0.1);
+          console.log(
+            `  [${i + 1}/${clips.length}] Narration (${narrationDuration.toFixed(1)}s) > clip (${clip.clipDuration.toFixed(1)}s) — extending to ${extDuration.toFixed(1)}s...`
+          );
+          const extOverlaidPath = path.join(clipsDir, `overlaid_ext_${i}.mp4`);
+          const extLayout = config.clipLayouts?.[clip.index] ?? config.globalLayout ?? "bottom-top";
+          const extInsightText = config.clipInsights?.[clip.index]?.[0];
+          await extractClipWithOverlay(config.videoPath, clip.clipStart, extDuration, extOverlaidPath, extLayout, "", "", extInsightText);
+          overlaidForMix = extOverlaidPath;
+          finalClipDuration = extDuration;
+        }
+
+        await replaceAudio(overlaidForMix, narrationPath, narratedPath);
+      }
 
       clips[i] = { ...clip, narrationPath, overlaidPath: narratedPath, clipDuration: finalClipDuration };
     }

@@ -382,7 +382,7 @@ function wrapText(
 /**
  * Reads the actual pixel dimensions of a video file using ffprobe.
  */
-function getVideoDimensions(inputPath: string): Promise<{ width: number; height: number }> {
+export function getVideoDimensions(inputPath: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(inputPath, (err, metadata) => {
       if (err) return reject(err);
@@ -528,7 +528,14 @@ function drawtextLines(
 
 /** Sanitises a string for use inside an FFmpeg filter expression. */
 const safeFilter = (s: string, maxLen: number): string =>
-  s.replace(/'/g, "").replace(/:/g, "\\:").replace(/\[/g, "\\[").replace(/\]/g, "\\]").slice(0, maxLen);
+  s
+    .replace(/\\/g, "")       // strip backslashes (avoid accidental escape sequences)
+    .replace(/'/g, "")        // strip single quotes (they close the text='...' value)
+    .replace(/%/g, "%%")      // escape % — FFmpeg drawtext expands %{VARNAME} macros
+    .replace(/:/g, "\\:")     // escape colons (filter graph option separator)
+    .replace(/\[/g, "\\[")    // escape brackets (filter graph stream labels)
+    .replace(/\]/g, "\\]")
+    .slice(0, maxLen);
 
 /**
  * Builds the complete FFmpeg video-filter chain for a given layout.
@@ -743,20 +750,25 @@ function buildOverlayFilters(
 /**
  * Generates a standalone insight card video used as the leading segment
  * in a sequential layout. Dimensions must match the clip to allow concat.
+ *
+ * @param narrationPath  Optional path to an MP3 narration file. When provided
+ *                       the narration plays as audio during the card instead of
+ *                       silence — narration is padded or trimmed to durationSeconds.
  */
-async function generateInsightCard(
+export async function generateInsightCard(
   outputPath: string,
   insightText: string,
   labelText: string,
   durationSeconds: number,
   VW: number,
   VH: number,
+  narrationPath?: string,
 ): Promise<void> {
   ensureDir(path.dirname(outputPath));
   const m = scaledMetrics(VH);
   const textMaxPx = VW - 160;
 
-  const insightLines = wrapText(safeFilter(insightText, 600), textMaxPx, m.fsMain, "bold").slice(0, 6);
+  const insightLines = wrapText(safeFilter(insightText, 800), textMaxPx, m.fsMain, "bold").slice(0, 10);
   const labelLines   = wrapText(safeFilter(labelText, 120),   textMaxPx, m.fsLabel, "mono").slice(0, 2);
 
   const insightBoxH = insightLines.length * m.lhMain  + m.padYMain  * 2;
@@ -788,11 +800,23 @@ async function generateInsightCard(
   writeSolidColorPng(0x00, 0x0E, 0x24, VW, VH, tmpPng)
   try {
     await new Promise<void>((resolve, reject) => {
-      ffmpeg()
+      const cmd = ffmpeg()
         .input(tmpPng)
         .inputOptions(['-loop', '1', '-framerate', '30'])
-        .input(SILENCE_SRC)
-        .inputOptions(SILENCE_OPTS)
+
+      if (narrationPath) {
+        // Narration audio: pad with silence if shorter than card, trim if longer
+        cmd
+          .input(narrationPath)
+          .complexFilter([`[1:a]apad,atrim=duration=${durationSeconds}[aout]`])
+          .outputOptions(["-map 0:v", "-map [aout]"])
+      } else {
+        cmd
+          .input(SILENCE_SRC)
+          .inputOptions(SILENCE_OPTS)
+      }
+
+      cmd
         .videoFilters(filters)
         .videoCodec("libx264")
         .audioCodec("aac")
@@ -820,6 +844,10 @@ export async function extractClipWithOverlay(
   mainText: string,
   labelText: string,
   insightText?: string,
+  /** For sequential layout: if provided, the bare extracted clip (no card) is saved here
+   *  so the pipeline can later rebuild the audio mix (narration over card + original audio
+   *  during clip) without a second source-video seek. */
+  rawClipOutputPath?: string,
 ): Promise<void> {
   ensureDir(path.dirname(outputPath));
 
@@ -827,7 +855,7 @@ export async function extractClipWithOverlay(
     const tmpDir = path.dirname(outputPath);
     const base = `_seq_${Date.now()}`;
     const cardPath = path.join(tmpDir, `${base}_card.mp4`);
-    const clipPath = path.join(tmpDir, `${base}_clip.mp4`);
+    const clipPath = rawClipOutputPath ?? path.join(tmpDir, `${base}_clip.mp4`);
     const { width: VW, height: VH } = await getVideoDimensions(videoPath);
     const cardText = insightText?.trim() || mainText;
     const cardDuration = Math.min(8, Math.max(3, 3 + cardText.length * 0.04));
@@ -846,8 +874,10 @@ export async function extractClipWithOverlay(
           .run();
       });
     } finally {
-      for (const f of [cardPath, clipPath]) {
-        try { fs.unlinkSync(f); } catch { /* ignore */ }
+      // Always clean up the temp card; only clean up clip if we own it (no rawClipOutputPath)
+      try { fs.unlinkSync(cardPath); } catch { /* ignore */ }
+      if (!rawClipOutputPath) {
+        try { fs.unlinkSync(clipPath); } catch { /* ignore */ }
       }
     }
     return;
