@@ -21,12 +21,16 @@ function crc32(buf: Buffer): number {
   return (crc ^ 0xFFFFFFFF) >>> 0
 }
 
-/** Writes a 1×1 solid-colour PNG to `filePath`. Used instead of lavfi `color=` source. */
-function writeSolidColorPng(r: number, g: number, b: number, filePath: string): void {
+/** Writes a solid-colour PNG at the given dimensions to `filePath`. Used instead of lavfi `color=` source. */
+function writeSolidColorPng(r: number, g: number, b: number, w: number, h: number, filePath: string): void {
   const ihdrData = Buffer.allocUnsafe(13)
-  ihdrData.writeUInt32BE(1, 0); ihdrData.writeUInt32BE(1, 4)
+  ihdrData.writeUInt32BE(w, 0); ihdrData.writeUInt32BE(h, 4)
   ihdrData[8] = 8; ihdrData[9] = 2; ihdrData[10] = 0; ihdrData[11] = 0; ihdrData[12] = 0
-  const idatData = deflateSync(Buffer.from([0, r, g, b]))
+  // Build one scanline (filter=None byte + w*3 RGB bytes) then repeat for h rows
+  const scanline = Buffer.allocUnsafe(1 + w * 3)
+  scanline[0] = 0
+  for (let i = 0; i < w; i++) { scanline[1 + i * 3] = r; scanline[2 + i * 3] = g; scanline[3 + i * 3] = b }
+  const idatData = deflateSync(Buffer.concat(Array.from({ length: h }, () => scanline)))
 
   function chunk(type: string, data: Buffer): Buffer {
     const t = Buffer.from(type, 'ascii')
@@ -203,7 +207,7 @@ export async function generateTitleCard(
   const safeSub = subtitle.replace(/'/g, "\\'").replace(/:/g, "\\:").slice(0, 120);
 
   const tmpPng = `${outputPath}.bg.png`
-  writeSolidColorPng(0x00, 0x0E, 0x24, tmpPng)
+  writeSolidColorPng(0x00, 0x0E, 0x24, 1280, 720, tmpPng)
   try {
     await new Promise<void>((resolve, reject) => {
       ffmpeg()
@@ -212,7 +216,6 @@ export async function generateTitleCard(
         .input(SILENCE_SRC)
         .inputOptions(SILENCE_OPTS)
         .videoFilters([
-          'scale=1280:720:flags=neighbor,setsar=1',
           "drawbox=x=80:y=280:w=1120:h=4:color=0x003478:t=fill",
           `drawtext=text='${safeTitle}':fontsize=54:fontcolor=white:x=(w-tw)/2:y=200`,
           `drawtext=text='${safeSub}':fontsize=28:fontcolor=0xC8D3E0:x=(w-tw)/2:y=320`,
@@ -244,7 +247,7 @@ export async function generateOutroCard(
   const durationStr = `${m}m ${s}s`;
 
   const tmpPng = `${outputPath}.bg.png`
-  writeSolidColorPng(0x00, 0x0E, 0x24, tmpPng)
+  writeSolidColorPng(0x00, 0x0E, 0x24, 1280, 720, tmpPng)
   try {
     await new Promise<void>((resolve, reject) => {
       ffmpeg()
@@ -253,7 +256,6 @@ export async function generateOutroCard(
         .input(SILENCE_SRC)
         .inputOptions(SILENCE_OPTS)
         .videoFilters([
-          'scale=1280:720:flags=neighbor,setsar=1',
           "drawbox=x=80:y=300:w=1120:h=2:color=0x003478:t=fill",
           `drawtext=text='${momentCount} Insight Moments · ${durationStr}':fontsize=36:fontcolor=white:x=(w-tw)/2:y=230`,
           "drawtext=text='Prepared with InsightCuts':fontsize=22:fontcolor=0xC8D3E0:x=(w-tw)/2:y=320",
@@ -783,7 +785,7 @@ async function generateInsightCard(
   ];
 
   const tmpPng = `${outputPath}.bg.png`
-  writeSolidColorPng(0x00, 0x0E, 0x24, tmpPng)
+  writeSolidColorPng(0x00, 0x0E, 0x24, VW, VH, tmpPng)
   try {
     await new Promise<void>((resolve, reject) => {
       ffmpeg()
@@ -791,7 +793,7 @@ async function generateInsightCard(
         .inputOptions(['-loop', '1', '-framerate', '30'])
         .input(SILENCE_SRC)
         .inputOptions(SILENCE_OPTS)
-        .videoFilters([`scale=${VW}:${VH}:flags=neighbor,setsar=1`, ...filters])
+        .videoFilters(filters)
         .videoCodec("libx264")
         .audioCodec("aac")
         .outputOptions(["-preset fast", "-t", String(durationSeconds)])
@@ -950,9 +952,12 @@ export function replaceAudio(
     ffmpeg()
       .input(videoPath)
       .input(audioPath)
+      // apad extends narration with silence so the clip plays its full duration
+      // when narration is shorter than the video. -shortest then stops at video end.
+      .complexFilter("[1:a]apad[a]")
       .outputOptions([
         "-map 0:v:0",
-        "-map 1:a:0",
+        "-map [a]",
         "-shortest",
         "-c:v libx264",
         "-c:a aac",
