@@ -267,6 +267,65 @@
   color: #aaa;
 }
 
+/* ── Ask AI row ──────────────────────────────── */
+.askRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid #e8e8e8;
+  background: #f5f5f5;
+}
+
+.askInput {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #333;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.askInput::placeholder {
+  color: #bbb;
+}
+
+.askInput:focus {
+  border-color: #F97316;
+}
+
+.askInput:disabled {
+  opacity: 0.5;
+}
+
+.askBtn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: #EA580C;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.askBtn:hover:not(:disabled) {
+  background: #F97316;
+}
+
+.askBtn:disabled {
+  background: #e0e0e0;
+  cursor: default;
+}
+
 /* ── Voice selector ──────────────────────────── */
 .selectWrap {
   position: relative;

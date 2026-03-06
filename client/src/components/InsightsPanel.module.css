@@ -460,7 +460,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .askAiBtn:hover {
@@ -468,10 +468,74 @@
   color: #F97316;
 }
 
-.aiHint {
-  font-size: 11px;
+.askAiBtnActive {
+  border-color: #e0e0e0;
   color: #aaa;
-  margin: 0;
-  text-align: center;
-  line-height: 1.4;
+}
+
+.askAiBtnActive:hover {
+  border-color: #ccc;
+  color: #888;
+}
+
+/* ── Inline AI input ─────────────────────────── */
+.aiInputRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid #F97316;
+  border-radius: 7px;
+  padding: 4px 4px 4px 10px;
+  background: #FFFBF7;
+}
+
+.aiInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: #333;
+  outline: none;
+  min-width: 0;
+}
+
+.aiInput::placeholder {
+  color: #bbb;
+}
+
+.aiInput:disabled {
+  opacity: 0.5;
+}
+
+.aiSubmitBtn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 5px;
+  background: #F97316;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.aiSubmitBtn:hover:not(:disabled) {
+  background: #EA580C;
+}
+
+.aiSubmitBtn:disabled {
+  background: #e0e0e0;
+  cursor: default;
+}
+
+.aiSpinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }

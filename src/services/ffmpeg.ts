@@ -1,15 +1,32 @@
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
+import { execFileSync } from "child_process";
 // @ts-ignore — no bundled types
 import ffmpegStatic from "ffmpeg-static";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 
 // ─── Binary paths ─────────────────────────────────────────────────────────────
 
-// Prefer explicit env overrides, fall back to bundled binaries.
-const FFMPEG_PATH = process.env.FFMPEG_PATH ?? (ffmpegStatic as string);
-const FFPROBE_PATH = process.env.FFPROBE_PATH ?? ffprobeInstaller.path;
+/**
+ * On Linux/Mac, prefer the system ffmpeg/ffprobe (installed via nixpacks on
+ * Railway) because it includes the full lavfi virtual-device format needed for
+ * title/outro/insight card generation. Falls back to the bundled static binary
+ * so dev machines without system ffmpeg still work.
+ */
+function resolveSystemBinary(name: string): string | undefined {
+  if (process.platform === "win32") return undefined;
+  try {
+    const p = execFileSync("which", [name], { encoding: "utf8" }).trim();
+    return p || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Prefer explicit env overrides → system binary → bundled static binary.
+const FFMPEG_PATH  = process.env.FFMPEG_PATH  ?? resolveSystemBinary("ffmpeg")  ?? (ffmpegStatic as string);
+const FFPROBE_PATH = process.env.FFPROBE_PATH ?? resolveSystemBinary("ffprobe") ?? ffprobeInstaller.path;
 
 ffmpeg.setFfmpegPath(FFMPEG_PATH);
 ffmpeg.setFfprobePath(FFPROBE_PATH);

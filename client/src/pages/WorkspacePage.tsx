@@ -45,6 +45,23 @@ const INITIAL_JOB: JobState = { jobId: '', status: 'idle', patterns: [] }
 
 export function WorkspacePage() {
   const navigate = useNavigate()
+
+  // If the Slack OAuth callback landed here with ?slack=connected, redirect
+  // back to wherever the user was (editor page) so they don't lose progress.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const slackParam = params.get('slack')
+    if (!slackParam) return
+    window.history.replaceState({}, '', window.location.pathname)
+    if (slackParam === 'connected') {
+      const returnUrl = localStorage.getItem('slack-return-url')
+      localStorage.removeItem('slack-return-url')
+      if (returnUrl) {
+        const sep = returnUrl.includes('?') ? '&' : '?'
+        window.location.replace(`${returnUrl}${sep}slack=connected`)
+      }
+    }
+  }, [])
   const [project, setProject] = useState<Project | null>(loadSavedProject)
   const [showModal, setShowModal] = useState(() => !loadSavedProject())
   const [videos, setVideos] = useState<UploadedVideo[]>([])

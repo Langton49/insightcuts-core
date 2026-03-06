@@ -10,6 +10,7 @@ interface Props {
   onUpload: (files: FileList) => void
   onAddToScene: (id: string) => void
   onRemoveFromScene: (id: string) => void
+  onAskAi: (id: string, instruction: string) => Promise<void>
 }
 
 export function InsightsPanel({
@@ -20,6 +21,7 @@ export function InsightsPanel({
   onUpload,
   onAddToScene,
   onRemoveFromScene,
+  onAskAi,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [dragover, setDragover] = useState(false)
@@ -173,6 +175,7 @@ export function InsightsPanel({
                   cards={cards}
                   onAddToScene={onAddToScene}
                   onRemoveFromScene={onRemoveFromScene}
+                  onAskAi={onAskAi}
                 />
               ))}
             </div>
@@ -190,11 +193,13 @@ function FileGroup({
   cards,
   onAddToScene,
   onRemoveFromScene,
+  onAskAi,
 }: {
   source: string
   cards: InsightCard[]
   onAddToScene: (id: string) => void
   onRemoveFromScene: (id: string) => void
+  onAskAi: (id: string, instruction: string) => Promise<void>
 }) {
   const [open, setOpen] = useState(true)
 
@@ -225,6 +230,7 @@ function FileGroup({
               card={card}
               onAddToScene={() => onAddToScene(card.id)}
               onRemoveFromScene={() => onRemoveFromScene(card.id)}
+              onAskAi={(instruction) => onAskAi(card.id, instruction)}
             />
           ))}
         </div>
@@ -239,12 +245,33 @@ function InsightCardView({
   card,
   onAddToScene,
   onRemoveFromScene,
+  onAskAi,
 }: {
   card: InsightCard
   onAddToScene: () => void
   onRemoveFromScene: () => void
+  onAskAi: (instruction: string) => Promise<void>
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [showInput, setShowInput] = useState(false)
+  const [instruction, setInstruction] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = instruction.trim()
+    if (!trimmed || aiLoading) return
+    setAiLoading(true)
+    try {
+      await onAskAi(trimmed)
+      setInstruction('')
+      setShowInput(false)
+    } catch {
+      // keep input open on error so user can retry
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   return (
     <div className={`${styles.insightCard} ${expanded ? styles.insightCardExpanded : ''}`}>
@@ -285,7 +312,11 @@ function InsightCardView({
               + Add to current scene
             </button>
           )}
-          <button className={styles.askAiBtn}>
+
+          <button
+            className={`${styles.askAiBtn} ${showInput ? styles.askAiBtnActive : ''}`}
+            onClick={() => { setShowInput(v => !v); setInstruction('') }}
+          >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
               <path
                 d="M12 2 L13.2 10.8 L22 12 L13.2 13.2 L12 22 L10.8 13.2 L2 12 L10.8 10.8 Z"
@@ -294,9 +325,35 @@ function InsightCardView({
                 strokeLinejoin="round"
               />
             </svg>
-            Ask AI
+            {showInput ? 'Cancel' : 'Ask AI'}
           </button>
-          <p className={styles.aiHint}>AI will integrate this insight into the narrative</p>
+
+          {showInput && (
+            <form className={styles.aiInputRow} onSubmit={handleSubmit}>
+              <input
+                className={styles.aiInput}
+                value={instruction}
+                onChange={e => setInstruction(e.target.value)}
+                placeholder="e.g. summarise further, make more specific…"
+                disabled={aiLoading}
+                autoFocus
+              />
+              <button
+                type="submit"
+                className={styles.aiSubmitBtn}
+                disabled={!instruction.trim() || aiLoading}
+                aria-label="Refine"
+              >
+                {aiLoading ? (
+                  <div className={styles.aiSpinner} />
+                ) : (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            </form>
+          )}
         </div>
       )}
     </div>

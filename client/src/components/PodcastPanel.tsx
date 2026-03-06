@@ -56,9 +56,9 @@ export function PodcastPanel({
 
       {/* Body */}
       {loading ? (
-        <LoadingState sub={`Writing a podcast narrative for your ${clips.length} scenes`} />
+        <LoadingState sub={`Writing a podcast narrative for your ${clips.filter(c => c.selected).length} scene${clips.filter(c => c.selected).length !== 1 ? 's' : ''}`} />
       ) : script === '' ? (
-        <EmptyState clips={clips} onGenerate={onGenerateScript} label="podcast script" />
+        <EmptyState clips={clips.filter(c => c.selected)} onGenerate={onGenerateScript} label="podcast script" />
       ) : (
         <div className={styles.content}>
           {/* Script section */}

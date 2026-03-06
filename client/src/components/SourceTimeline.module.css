@@ -99,7 +99,7 @@
   border-radius: inherit;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.45;
 }
 
 /* Zoomed filmstrip: same frames but scaled+offset to show only the window.

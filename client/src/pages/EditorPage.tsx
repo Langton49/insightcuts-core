@@ -20,8 +20,10 @@ import {
   uploadFile,
   extractInsightsApi,
   generateNarrationScriptApi,
+  refineNarrationScriptApi,
   generatePodcastScriptApi,
   renderPodcastApi,
+  refineInsightApi,
   mapRawInsight,
 } from '../api'
 import { startAssembly } from '../api/client'
@@ -161,6 +163,16 @@ export function EditorPage() {
 
   const selectedClip = clips[selectedIndex] ?? null
 
+  // ── Auto-open Share modal after Slack OAuth return ───────────────────────────
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('slack')) {
+      window.history.replaceState({}, '', window.location.pathname)
+      setShowShareModal(true)
+    }
+  }, [])
+
   // ── Load job on mount ────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -299,6 +311,19 @@ export function EditorPage() {
     ))
   }, [])
 
+  const handleAskAiOnInsight = useCallback(async (insightId: string, instruction: string) => {
+    const insight = insights.find(i => i.id === insightId)
+    if (!insight) return
+    const currentText = insight.title + (insight.description ? '. ' + insight.description : '')
+    const { text } = await refineInsightApi(currentText, instruction)
+    const dotIdx = text.indexOf('. ')
+    const newTitle = dotIdx > -1 ? text.slice(0, dotIdx) : text
+    const newDesc  = dotIdx > -1 ? text.slice(dotIdx + 2) : ''
+    setInsights(prev => prev.map(ins =>
+      ins.id === insightId ? { ...ins, title: newTitle, description: newDesc } : ins,
+    ))
+  }, [insights])
+
   // ── Narration handlers ──────────────────────────────────────────────────────
 
   const handleGenerateNarration = useCallback(async () => {
@@ -347,6 +372,13 @@ export function EditorPage() {
       s.clipIndex === clipIndex ? { ...s, script: text } : s,
     ))
   }, [])
+
+  const handleRefineNarration = useCallback(async (clipIndex: number, instruction: string) => {
+    const entry = narrationScripts.find(s => s.clipIndex === clipIndex)
+    if (!entry) return
+    const { script } = await refineNarrationScriptApi(jobId, entry.script, instruction)
+    handleUpdateNarrationScript(clipIndex, script)
+  }, [jobId, narrationScripts, handleUpdateNarrationScript])
 
   // ── Layout handlers ─────────────────────────────────────────────────────────
 
@@ -677,6 +709,7 @@ export function EditorPage() {
               onUpload={handleInsightUpload}
               onAddToScene={handleAddInsightToScene}
               onRemoveFromScene={handleRemoveInsightFromScene}
+              onAskAi={handleAskAiOnInsight}
             />
           )}
           {activePanel === 'narration' && (
@@ -692,6 +725,7 @@ export function EditorPage() {
               onUpdateScript={handleUpdateNarrationScript}
               onVoiceChange={setNarrationVoice}
               onAddNarration={handleGenerateNarration}
+              onRefineScript={handleRefineNarration}
             />
           )}
           {activePanel === 'podcast' && (

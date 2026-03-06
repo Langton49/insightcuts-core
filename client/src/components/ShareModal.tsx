@@ -152,7 +152,7 @@ export function ShareModal({ jobId, clips, hasBrief, hasPodcast, onClose }: Prop
           {slackStatus === null ? (
             <p className={styles.slackLoading}>Checking connection…</p>
           ) : !slackStatus.connected ? (
-            <button className={styles.connectBtn} onClick={() => { window.location.href = '/api/slack/connect' }}>
+            <button className={styles.connectBtn} onClick={() => { localStorage.setItem('slack-return-url', window.location.href); window.location.href = '/api/slack/connect' }}>
               <SlackLogo />
               Connect Slack
             </button>

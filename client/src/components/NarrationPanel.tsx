@@ -28,6 +28,7 @@ interface Props {
   onUpdateScript: (clipIndex: number, text: string) => void
   onVoiceChange: (voiceId: string) => void
   onAddNarration: () => void
+  onRefineScript: (clipIndex: number, instruction: string) => Promise<void>
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -44,8 +45,22 @@ export function NarrationPanel({
   onUpdateScript,
   onVoiceChange,
   onAddNarration,
+  onRefineScript,
 }: Props) {
   const [sceneIdx, setSceneIdx] = useState(0)
+  const [askText, setAskText] = useState('')
+  const [refining, setRefining] = useState(false)
+
+  const handleAskAI = async () => {
+    if (!askText.trim() || !current || refining) return
+    setRefining(true)
+    try {
+      await onRefineScript(current.clipIndex, askText.trim())
+      setAskText('')
+    } finally {
+      setRefining(false)
+    }
+  }
   const total = scripts.length
   const current = scripts[Math.min(sceneIdx, total - 1)]
 
@@ -70,9 +85,9 @@ export function NarrationPanel({
       {isLocked ? (
         <LockedState onUnlock={onUnlock} />
       ) : loading ? (
-        <LoadingState sub={`Crafting narration for ${clips.length} scene${clips.length !== 1 ? 's' : ''}`} />
+        <LoadingState sub={`Crafting narration for ${clips.filter(c => c.selected).length} scene${clips.filter(c => c.selected).length !== 1 ? 's' : ''}`} />
       ) : scripts.length === 0 ? (
-        <EmptyState clips={clips} onGenerate={onGenerateScript} label="narration script" />
+        <EmptyState clips={clips.filter(c => c.selected)} onGenerate={onGenerateScript} label="narration script" />
       ) : (
         <div className={styles.content}>
           {/* Script section */}
@@ -102,6 +117,34 @@ export function NarrationPanel({
                 onChange={e => current && onUpdateScript(current.clipIndex, e.target.value)}
                 placeholder="Your AI script will show up here"
               />
+              <div className={styles.askRow}>
+                <input
+                  className={styles.askInput}
+                  value={askText}
+                  onChange={e => setAskText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAskAI()}
+                  placeholder="Ask AI to edit…"
+                  disabled={refining}
+                />
+                <button
+                  className={styles.askBtn}
+                  onClick={handleAskAI}
+                  disabled={!askText.trim() || refining}
+                  title="Ask AI"
+                >
+                  {refining ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeDasharray="56" strokeDashoffset="20" strokeLinecap="round">
+                        <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite" />
+                      </circle>
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M9.107 5.448c.598-1.75 3.016-1.803 3.725-.159l.06.16.807 2.36a4 4 0 002.276 2.411l.217.081 2.36.806c1.75.598 1.803 3.016.16 3.725l-.16.06-2.36.807a4 4 0 00-2.412 2.276l-.081.216-.806 2.361c-.598 1.75-3.016 1.803-3.724.16l-.062-.16-.806-2.36a4 4 0 00-2.276-2.412l-.216-.081-2.36-.806c-1.751-.598-1.804-3.016-.16-3.724l.16-.062 2.36-.806A4 4 0 008.22 8.025l.081-.216z" fill="currentColor"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -182,7 +225,7 @@ export function EmptyState({
       </div>
       <p className={styles.emptyTitle}>Generate {label}</p>
       <p className={styles.emptySubtitle}>
-        AI will write a script for each of your {clips.length} scene{clips.length !== 1 ? 's' : ''}.
+        AI will write a script for each of your {clips.filter(c => c.selected).length} scene{clips.filter(c => c.selected).length !== 1 ? 's' : ''}.
         You can edit before generating audio.
       </p>
       <button className={styles.primaryBtn} onClick={onGenerate} style={{ marginTop: 8 }}>

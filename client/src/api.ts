@@ -115,6 +115,31 @@ export function renderPodcastApi(
   })
 }
 
+/** Refine an existing narration script with a user instruction. */
+export function refineNarrationScriptApi(
+  jobId: string,
+  script: string,
+  instruction: string,
+): Promise<{ script: string }> {
+  return apiFetch(`/api/jobs/${jobId}/narration/refine`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ script, instruction }),
+  })
+}
+
+/** Rewrite a single insight finding with a user instruction. */
+export function refineInsightApi(
+  insightText: string,
+  instruction: string,
+): Promise<{ text: string }> {
+  return apiFetch('/api/insights/refine', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ insightText, instruction }),
+  })
+}
+
 /** Map a raw backend insight (flat text) to the frontend InsightCard shape. */
 export function mapRawInsight(r: RawInsight): Omit<InsightCard, 'added' | 'addedToClipIndex'> {
   const dotIdx = r.text.indexOf('. ')

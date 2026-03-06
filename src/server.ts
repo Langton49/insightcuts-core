@@ -39,7 +39,7 @@ const PODCAST_INTRO_OUTRO_PATH = path.join(
 import { runDetection, runAssembly } from "./pipeline.js";
 import { searchGestures, getAllIndexedVideos } from "./services/twelve-labs.js";
 import { extractText } from "./services/document-extractor.js";
-import { extractInsights, generateClipNarration, generatePodcastScript } from "./services/openai.js";
+import { extractInsights, generateClipNarration, generatePodcastScript, refineScript, refineInsight } from "./services/openai.js";
 import { generateAudio } from "./services/elevenlabs.js";
 import { addPodcastIntroOutro } from "./services/ffmpeg.js";
 import { getSlackToken, getSlackWorkspace, saveSlackAuth, clearSlackAuth, listChannels, uploadFileAndPost, generateShareMessage } from "./services/slack.js";
@@ -656,6 +656,29 @@ app.post("/api/jobs/:id/narration/script", async (req, res) => {
 });
 
 /**
+ * POST /api/jobs/:id/narration/refine
+ * Rewrites a single narration script based on a user instruction.
+ * Body: { script: string, instruction: string }
+ * Returns: { script: string }
+ */
+app.post("/api/jobs/:id/narration/refine", async (req, res) => {
+  const job = jobs.get(req.params.id);
+  if (!job?.detection) {
+    res.status(404).json({ error: "Job not found or detection not complete" }); return;
+  }
+  const { script, instruction } = req.body as { script?: string; instruction?: string };
+  if (!script?.trim() || !instruction?.trim()) {
+    res.status(400).json({ error: "script and instruction are required" }); return;
+  }
+  try {
+    const refined = await refineScript(script, instruction);
+    res.json({ script: refined });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
  * POST /api/jobs/:id/podcast/render
  * Renders a podcast script to audio via ElevenLabs and saves it to the job output dir.
  * This is a standalone action — no full assembly required.
@@ -725,6 +748,26 @@ app.post("/api/jobs/:id/podcast/script", async (req, res) => {
       documentText: docTexts.join("\n\n"),
     });
     res.json({ script });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * POST /api/insights/refine
+ * Rewrites a single research insight using a user instruction
+ * (e.g. "summarise further", "make more specific", "rewrite for executives").
+ * Body: { insightText: string, instruction: string }
+ * Returns: { text: string }
+ */
+app.post("/api/insights/refine", async (req, res) => {
+  const { insightText, instruction } = req.body as { insightText?: string; instruction?: string };
+  if (!insightText?.trim() || !instruction?.trim()) {
+    res.status(400).json({ error: "insightText and instruction are required" }); return;
+  }
+  try {
+    const text = await refineInsight(insightText, instruction);
+    res.json({ text });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

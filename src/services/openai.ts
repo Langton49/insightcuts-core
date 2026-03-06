@@ -164,6 +164,63 @@ export async function transcribeClipAudio(filePath: string): Promise<string> {
   }
 }
 
+// ─── Insight refinement ───────────────────────────────────────────────────────
+
+/**
+ * Rewrites a single research insight finding based on a user instruction
+ * (e.g. "summarise further", "make more specific", "rewrite for executives").
+ * Returns the revised finding as a single plain-text string.
+ */
+export async function refineInsight(insightText: string, instruction: string): Promise<string> {
+  const client = getClient();
+
+  const prompt = `You are editing a UX research finding based on a user instruction.
+
+Current finding:
+"${insightText}"
+
+User instruction: "${instruction}"
+
+Rewrite the finding applying the instruction. Keep it as a single concrete observation in 1-2 sentences. Write in plain English without jargon. Return only the revised finding text with no extra commentary.`;
+
+  const response = await client.chat.completions.create({
+    model: "gpt-5.2",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.5,
+    max_completion_tokens: 300,
+  });
+
+  return response.choices[0]?.message?.content?.trim() ?? insightText;
+}
+
+// ─── Script refinement ────────────────────────────────────────────────────────
+
+/**
+ * Rewrites an existing narration or podcast script based on a user instruction
+ * (e.g. "make it shorter", "add more enthusiasm", "make it formal").
+ */
+export async function refineScript(currentScript: string, instruction: string): Promise<string> {
+  const client = getClient();
+
+  const prompt = `You are editing a voiceover script based on a user instruction.
+
+Current script:
+"${currentScript}"
+
+User instruction: "${instruction}"
+
+Rewrite the script applying the instruction. Keep the same approximate length unless told otherwise. Maintain the natural spoken-language style with short sentences, conversational rhythm, and bracketed emotion cues where appropriate (e.g. [thoughtful], [surprised], [curious]). Return only the revised script text with no extra commentary.`;
+
+  const response = await client.chat.completions.create({
+    model: "gpt-5.2",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.7,
+    max_completion_tokens: 500,
+  });
+
+  return response.choices[0]?.message?.content?.trim() ?? currentScript;
+}
+
 // ─── Podcast script ───────────────────────────────────────────────────────────
 
 export interface PodcastScriptContext {
