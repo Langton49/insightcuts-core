@@ -331,20 +331,6 @@ export function SourceTimeline({
           className={`${styles.track} ${isDraggingMove ? styles.trackDragging : ''}`}
 
         >
-          {hasFilmstrip && windowDuration > 0 && sourceDuration > 0 && (
-            <div
-              className={styles.zoomedFilmstrip}
-              style={{
-                width: `${(sourceDuration / windowDuration) * 100}%`,
-                left: `-${(windowStart / windowDuration) * 100}%`,
-              }}
-            >
-              {trackFrames.map((src, i) => (
-                <img key={i} className={styles.filmstripFrame} src={src} alt="" draggable={false} />
-              ))}
-            </div>
-          )}
-
           {clips.map((clip, i) => {
             if (!clip.selected) return null
             // Skip clips entirely outside the window
