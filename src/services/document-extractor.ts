@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { PDFParse } from "pdf-parse";
+import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 
 const MAX_CHARS = 12_000;
@@ -16,8 +16,7 @@ export async function extractText(filePath: string): Promise<string> {
 
   if (ext === ".pdf") {
     const buffer = fs.readFileSync(filePath);
-    const parser = new PDFParse({ data: buffer, verbosity: 0 });
-    const result = await parser.getText();
+    const result = await pdfParse(buffer);
     text = result.text;
   } else if (ext === ".docx") {
     const result = await mammoth.extractRawText({ path: filePath });

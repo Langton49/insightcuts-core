@@ -21,7 +21,7 @@
     "mammoth": "^1.11.0",
     "multer": "^2.1.0",
     "openai": "^6.25.0",
-    "pdf-parse": "^2.4.5",
+    "pdf-parse": "^1.1.1",
     "twelvelabs-js": "^1.2.0"
   },
   "devDependencies": {
