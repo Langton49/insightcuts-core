@@ -1,0 +1,60 @@
+.bar {
+  flex-shrink: 0;
+  border-top: 1px solid #e8e8e8;
+  background: #fff;
+  padding: 12px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.dotActive {
+  background: #F97316;
+}
+
+.label {
+  font-size: 13px;
+  color: #888;
+}
+
+.button {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  background: #e8e8e8;
+  color: #555;
+  transition: background 0.15s;
+}
+
+.buttonActive {
+  background: #EA580C;
+  color: #fff;
+}
+
+.buttonActive:hover:not(:disabled) {
+  background: #F97316;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+}

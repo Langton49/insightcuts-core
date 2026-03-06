@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InsightCuts</title>
+</head>
+<body>
+
+  <header>
+    <h1>InsightCuts</h1>
+    <p>AI-powered video briefing pipeline</p>
+  </header>
+
+  <main>
+
+    <!-- Step 1: Upload -->
+    <section id="section-upload">
+      <h2>Step 1 — Upload</h2>
+      <div>
+        <label for="video-upload">Source video</label>
+        <input type="file" id="video-upload" accept="video/*" />
+      </div>
+      <div>
+        <label for="doc-upload">Research document (optional)</label>
+        <input type="file" id="doc-upload" accept=".pdf,.docx,.txt" />
+      </div>
+    </section>
+
+    <!-- Step 2: Configure Detection -->
+    <section id="section-detect">
+      <h2>Step 2 — Detect Gestures</h2>
+      <div>
+        <label for="gesture-query">Gesture query</label>
+        <input type="text" id="gesture-query" placeholder="e.g. person pointing at screen" />
+      </div>
+      <div>
+        <label for="clip-before">Seconds before gesture</label>
+        <input type="number" id="clip-before" value="30" />
+      </div>
+      <div>
+        <label for="clip-after">Seconds after gesture</label>
+        <input type="number" id="clip-after" value="10" />
+      </div>
+      <div>
+        <label for="max-clips">Max clips</label>
+        <input type="number" id="max-clips" value="5" />
+      </div>
+      <button id="btn-detect">Run Detection</button>
+    </section>
+
+    <!-- Step 3: Review Matches -->
+    <section id="section-review">
+      <h2>Step 3 — Review Matches</h2>
+      <p>Detection results will appear here. Select which clips to include in the brief.</p>
+      <div id="matches-list">
+        <!-- Populated dynamically -->
+      </div>
+      <button id="btn-assemble" disabled>Assemble Brief</button>
+    </section>
+
+    <!-- Step 4: Output -->
+    <section id="section-output">
+      <h2>Step 4 — Output</h2>
+      <div>
+        <h3>Brief Video</h3>
+        <video id="brief-player" controls></video>
+        <a id="brief-download" href="#">Download brief.mp4</a>
+      </div>
+      <div>
+        <h3>Podcast</h3>
+        <audio id="podcast-player" controls></audio>
+        <a id="podcast-download" href="#">Download podcast.mp3</a>
+      </div>
+    </section>
+
+    <!-- Job Status -->
+    <section id="section-status">
+      <h2>Job Status</h2>
+      <p id="status-text">No job running.</p>
+    </section>
+
+  </main>
+
+</body>
+</html>

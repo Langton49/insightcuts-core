@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install openai pdf-parse mammoth)",
+      "Bash(npm install --save-dev @types/pdf-parse @types/mammoth)",
+      "Bash(npm install --save-dev @types/pdf-parse)",
+      "Bash(node -e \"import\\(''pdf-parse''\\).then\\(m => console.log\\(''pdf-parse ok''\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")"
+    ]
+  }
+}

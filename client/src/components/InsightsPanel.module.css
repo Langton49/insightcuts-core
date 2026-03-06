@@ -1,0 +1,475 @@
+.panel {
+  width: 360px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-left: 1px solid #e8e8e8;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleIcon {
+  color: #F97316;
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.closeBtn:hover {
+  background: #eee;
+}
+
+/* ── Body ─────────────────────────────────────── */
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Upload zone ──────────────────────────────── */
+.uploadZone {
+  flex-shrink: 0;
+  margin: 12px 12px 0;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: #fafafa;
+}
+
+.uploadZone:hover,
+.uploadZone.dragover {
+  border-color: #F97316;
+  background: #FFF7ED;
+}
+
+.uploadIcon {
+  color: #aaa;
+  flex-shrink: 0;
+}
+
+.uploadZone:hover .uploadIcon,
+.uploadZone.dragover .uploadIcon {
+  color: #F97316;
+}
+
+.uploadLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+.uploadZone:hover .uploadLabel {
+  color: #F97316;
+}
+
+.fileTypes {
+  font-size: 11px;
+  color: #aaa;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ── Loading ─────────────────────────────────── */
+.loadingArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px 20px;
+}
+
+.loadingIconCircle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(234, 88, 12, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.loadingTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+  margin: 0;
+}
+
+.loadingSubtitle {
+  font-size: 13px;
+  color: #555;
+  margin: 0;
+  text-align: center;
+}
+
+/* File list during loading */
+.fileList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.fileIcon {
+  flex-shrink: 0;
+}
+
+.fileRowName {
+  flex: 1;
+  font-size: 13px;
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileRowSpinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(234, 88, 12, 0.3);
+  border-top-color: #EA580C;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Progress bar */
+.progressTrack {
+  width: 100%;
+  height: 4px;
+  background: #f0f0f0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.progressFill {
+  height: 100%;
+  background: #EA580C;
+  border-radius: 2px;
+  animation: progressGrow 2s ease-out forwards;
+}
+
+@keyframes progressGrow {
+  from { width: 0% }
+  to { width: 75% }
+}
+
+.finalizingText {
+  font-size: 12px;
+  color: #aaa;
+  margin: 0;
+}
+
+/* Animated dots */
+.dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #F97316;
+  animation: dotPulse 1.2s ease-in-out infinite;
+  opacity: 0.3;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ── Results ─────────────────────────────────── */
+.results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.expandHint {
+  font-size: 11px;
+  color: #aaa;
+  margin: 0 0 4px;
+  text-align: center;
+}
+
+/* ── File group accordion ────────────────────── */
+.fileGroup {
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fileGroupHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fafafa;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.fileGroupHeader:hover {
+  background: #FFF7ED;
+}
+
+.fileGroupIcon {
+  color: #F97316;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.fileGroupName {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileGroupChevron {
+  color: #aaa;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  transition: transform 0.18s;
+}
+
+.fileGroupChevron.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.fileGroupCards {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #e8e8e8;
+}
+
+/* ── Individual insight card ─────────────────── */
+.insightCard {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.insightCard:last-child {
+  border-bottom: none;
+}
+
+.insightCard.insightCardExpanded {
+  border-left: 3px solid #F97316;
+}
+
+.insightCardHeader {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.insightCardHeader:hover {
+  background: #f5f5f5;
+}
+
+.insightCardText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.insightTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+  line-height: 1.4;
+}
+
+.insightDesc {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.insightChevron {
+  color: #aaa;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+  transition: transform 0.18s;
+}
+
+.insightChevron.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* Expanded card body */
+.insightCardBody {
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.insightDescExpanded {
+  font-size: 12px;
+  color: #555;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.addToSceneBtn {
+  width: 100%;
+  padding: 9px;
+  background: #EA580C;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.addToSceneBtn:hover {
+  background: #F97316;
+}
+
+.addedBadge {
+  width: 100%;
+  padding: 9px;
+  background: #f0faf2;
+  color: #28a745;
+  border: 1px solid #c3e6cc;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.removeFromSceneBtn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #28a745;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.removeFromSceneBtn:hover {
+  opacity: 1;
+}
+
+.askAiBtn {
+  width: 100%;
+  padding: 8px;
+  background: none;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.askAiBtn:hover {
+  border-color: #F97316;
+  color: #F97316;
+}
+
+.aiHint {
+  font-size: 11px;
+  color: #aaa;
+  margin: 0;
+  text-align: center;
+  line-height: 1.4;
+}
