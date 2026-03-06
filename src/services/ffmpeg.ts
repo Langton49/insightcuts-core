@@ -534,7 +534,7 @@ const safeFilter = (s: string, maxLen: number): string =>
     .trim()
     .replace(/\\/g, "")         // strip backslashes (avoid accidental escape sequences)
     .replace(/'/g, "")          // strip single quotes (they close the text='...' value)
-    .replace(/%/g, "%%")        // escape % — FFmpeg drawtext expands %{VARNAME} macros
+    .replace(/%/g, " percent")  // replace % — drawtext expands %{...} macros; direct % causes silent render failures
     .replace(/:/g, "\\:")       // escape colons (filter graph option separator)
     .replace(/\[/g, "\\[")      // escape brackets (filter graph stream labels)
     .replace(/\]/g, "\\]")
