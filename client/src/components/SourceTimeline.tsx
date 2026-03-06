@@ -131,7 +131,7 @@ export function SourceTimeline({
         return
       }
 
-      const numFrames = Math.max(1, Math.round(trackWidth / FRAME_W))
+      const numFrames = Math.min(16, Math.max(1, Math.round(trackWidth / FRAME_W)))
       const canvas = document.createElement('canvas')
       canvas.width = FRAME_W
       canvas.height = FRAME_W
@@ -148,9 +148,9 @@ export function SourceTimeline({
         if (cancelled) break
         ctx.drawImage(video, 0, 0, FRAME_W, FRAME_W)
         frames.push(canvas.toDataURL('image/jpeg', 0.7))
+        // Render each frame as it loads — don't wait for the full strip
+        setTrackFrames([...frames])
       }
-
-      if (!cancelled) setTrackFrames(frames)
       video.src = ''
     }
 

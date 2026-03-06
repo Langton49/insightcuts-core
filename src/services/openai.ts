@@ -102,8 +102,13 @@ Each finding should be:
 - A single concrete observation, behaviour, or data point (1-2 sentences)
 - Specific enough to connect to a particular moment in a video recording
 - Written in plain English without jargon
+- Where available, include specific numbers, percentages, counts, or measurements (e.g. "7 out of 10 participants", "42% of users", "took an average of 3 attempts") — these make findings more credible and actionable
 
-Rank the findings from most insightful to least insightful. Put the most surprising, impactful, or non-obvious findings first. Put more generic or expected observations last.
+Rank the findings from most insightful to least insightful using this priority order:
+1. Findings with specific numbers or quantitative evidence (most credible)
+2. Findings that reveal surprising, unexpected, or counterintuitive behaviour
+3. Findings with clear actionable implications
+4. General qualitative observations (least priority)
 
 Document source: "${sourceLabel}"
 
@@ -219,6 +224,64 @@ Rewrite the script applying the instruction. Keep the same approximate length un
   });
 
   return response.choices[0]?.message?.content?.trim() ?? currentScript;
+}
+
+// ─── Email summary ────────────────────────────────────────────────────────────
+
+export interface EmailSummary {
+  subject: string;
+  summary: string;
+}
+
+/**
+ * Generates a short email subject and 2-3 sentence summary for sharing
+ * an InsightCuts project via email.
+ */
+export async function generateEmailSummary(
+  projectTitle: string,
+  gestureQuery: string,
+  clipCount: number,
+  insights: string[]
+): Promise<EmailSummary> {
+  const client = getClient();
+
+  const insightLines = insights.length > 0
+    ? `\n\nKey insights:\n${insights.slice(0, 5).map((t, i) => `${i + 1}. ${t}`).join("\n")}`
+    : "";
+
+  const prompt = `You are writing a brief email notification about a UX research project summary.
+
+Project: "${projectTitle}"
+Research focus: "${gestureQuery}"
+Video clips found: ${clipCount}${insightLines}
+
+Write:
+1. A concise email subject line (max 10 words, no quotes)
+2. A 2-3 sentence summary suitable for an email body — what was found, why it matters
+
+Return a JSON object with:
+- "subject": the email subject line
+- "summary": the 2-3 sentence body summary
+
+Return ONLY valid JSON.`;
+
+  const response = await client.chat.completions.create({
+    model: "gpt-5.2",
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 0.5,
+    max_completion_tokens: 200,
+  });
+
+  try {
+    const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}") as { subject?: string; summary?: string };
+    return {
+      subject: parsed.subject ?? `InsightCuts: ${projectTitle}`,
+      summary: parsed.summary ?? "",
+    };
+  } catch {
+    return { subject: `InsightCuts: ${projectTitle}`, summary: "" };
+  }
 }
 
 // ─── Podcast script ───────────────────────────────────────────────────────────

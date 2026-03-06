@@ -30,6 +30,36 @@ interface Props {
 export function ShareModal({ jobId, clips, hasBrief, hasPodcast, onClose }: Props) {
   const selected = clips.filter(c => c.selected)
 
+  // ── Email state ──────────────────────────────────────────────────────────────
+  const [emailTo, setEmailTo] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+  const [emailResult, setEmailResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  const handleSendEmail = async () => {
+    const addr = emailTo.trim()
+    if (!addr) return
+    setEmailSending(true)
+    setEmailResult(null)
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}/share/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: addr }),
+      })
+      const data = await resp.json() as { ok?: boolean; error?: string }
+      if (data.ok) {
+        setEmailResult({ ok: true, message: `Sent to ${addr}` })
+        setEmailTo('')
+      } else {
+        setEmailResult({ ok: false, message: data.error ?? 'Send failed' })
+      }
+    } catch (err) {
+      setEmailResult({ ok: false, message: (err as Error).message })
+    } finally {
+      setEmailSending(false)
+    }
+  }
+
   // ── Slack state ──────────────────────────────────────────────────────────────
   const [slackStatus, setSlackStatus] = useState<SlackStatus | null>(null)
   const [channels, setChannels] = useState<Channel[]>([])
@@ -200,6 +230,35 @@ export function ShareModal({ jobId, clips, hasBrief, hasPodcast, onClose }: Prop
           {shareResult && (
             <p className={shareResult.ok ? styles.shareSuccess : styles.shareError}>
               {shareResult.message}
+            </p>
+          )}
+        </div>
+
+        {/* ── Share via Email ───────────────────────────────────────────────── */}
+        <div className={styles.divider} />
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>Share via Email</div>
+          <div className={styles.emailInputRow}>
+            <input
+              className={styles.emailInput}
+              type="email"
+              placeholder="recipient@example.com"
+              value={emailTo}
+              onChange={e => setEmailTo(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+              disabled={emailSending}
+            />
+            <button
+              className={styles.emailSendBtn}
+              onClick={handleSendEmail}
+              disabled={!emailTo.trim() || emailSending}
+            >
+              {emailSending ? 'Sending…' : 'Send'}
+            </button>
+          </div>
+          {emailResult && (
+            <p className={emailResult.ok ? styles.shareSuccess : styles.shareError}>
+              {emailResult.message}
             </p>
           )}
         </div>

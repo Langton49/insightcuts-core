@@ -39,7 +39,8 @@ const PODCAST_INTRO_OUTRO_PATH = path.join(
 import { runDetection, runAssembly } from "./pipeline.js";
 import { searchGestures, getAllIndexedVideos } from "./services/twelve-labs.js";
 import { extractText } from "./services/document-extractor.js";
-import { extractInsights, generateClipNarration, generatePodcastScript, refineScript, refineInsight } from "./services/openai.js";
+import { extractInsights, generateClipNarration, generatePodcastScript, refineScript, refineInsight, generateEmailSummary } from "./services/openai.js";
+import { sendEmail, buildEmailHtml } from "./services/email.js";
 import { generateAudio } from "./services/elevenlabs.js";
 import { addPodcastIntroOutro } from "./services/ffmpeg.js";
 import { getSlackToken, getSlackWorkspace, saveSlackAuth, clearSlackAuth, listChannels, uploadFileAndPost, generateShareMessage } from "./services/slack.js";
@@ -864,6 +865,40 @@ app.post("/api/jobs/:id/share/podcast", async (req, res) => {
     res.json({ ok: true, fileId });
   } catch (err) {
     console.error("[Slack] Share podcast failed:", err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * POST /api/jobs/:id/share/email
+ * Sends an AI-generated email summary of the project to a recipient.
+ * Body: { to: string }
+ */
+app.post("/api/jobs/:id/share/email", async (req, res) => {
+  const job = jobs.get(req.params.id);
+  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+  const { to } = req.body as { to?: string };
+  if (!to?.trim()) { res.status(400).json({ error: "to (email address) is required" }); return; }
+  try {
+    const clipCount = job.assembly?.clips?.length ?? job.detection?.matches?.length ?? 0;
+    const insights = Object.values(job.config.clipInsights ?? {}).flat();
+    const { subject, summary } = await generateEmailSummary(
+      job.config.title ?? "InsightCuts Project",
+      job.config.gestureQuery,
+      clipCount,
+      insights
+    );
+    const html = buildEmailHtml({
+      projectTitle: job.config.title ?? "InsightCuts Project",
+      summary,
+      gestureQuery: job.config.gestureQuery,
+      clipCount,
+      insights,
+    });
+    await sendEmail({ to, subject, html });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[email] Share failed:", err);
     res.status(500).json({ error: (err as Error).message });
   }
 });

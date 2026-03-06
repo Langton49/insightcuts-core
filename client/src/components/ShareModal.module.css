@@ -280,6 +280,60 @@
   color: #D0021B;
 }
 
+/* ── Email ──────────────────────────────────────────────────────────────────── */
+
+.emailInputRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.emailInput {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111;
+  outline: none;
+  background: #fafafa;
+  transition: border-color 0.15s;
+}
+
+.emailInput:focus {
+  border-color: #EA580C;
+}
+
+.emailInput::placeholder {
+  color: #bbb;
+}
+
+.emailInput:disabled {
+  opacity: 0.6;
+}
+
+.emailSendBtn {
+  padding: 8px 18px;
+  background: #EA580C;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.emailSendBtn:hover:not(:disabled) {
+  background: #F97316;
+}
+
+.emailSendBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .downloadAllBtn {
   align-self: flex-end;
   padding: 7px 16px;
