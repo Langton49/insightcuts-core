@@ -96,7 +96,8 @@ const storage = multer.diskStorage({
     cb(null, `${randomUUID()}${path.extname(file.originalname)}`);
   },
 });
-const upload = multer({ storage });
+const MAX_UPLOAD_BYTES = Number(process.env.MAX_UPLOAD_MB ?? 2048) * 1024 * 1024;
+const upload = multer({ storage, limits: { fileSize: MAX_UPLOAD_BYTES } });
 
 // ─── Job store ────────────────────────────────────────────────────────────────
 
