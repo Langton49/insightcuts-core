@@ -62,9 +62,9 @@ async function ttsChunk(text: string, voiceId: string, apiKey: string): Promise<
       text,
       model_id: "eleven_v3",
       voice_settings: {
-        stability: 0.35,
-        similarity_boost: 0.75,
-        style: 0.45,
+        stability: 0.28,       // lower = more expressive variation between sentences
+        similarity_boost: 0.72, // slight reduction allows more natural prosody
+        style: 0.60,           // higher style exaggeration for emotive delivery
         use_speaker_boost: true,
       },
     }),

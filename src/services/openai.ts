@@ -69,7 +69,11 @@ Requirements:
 - Write as natural spoken language — short sentences, conversational rhythm
 - Use commas and short pauses naturally, like a person actually talking
 - Avoid long complex sentences — break them into 2-3 short ones instead
-- Use bracketed emotion cues (e.g. [thoughtful], [surprised], [concerned], [curious], [impressed]) where they naturally fit the tone — place them at the start of a sentence or before a key word; emotions must match what is actually being described
+- Use bracketed expression cues to direct the TTS voice — these are read directly by ElevenLabs and shape delivery, so they must be accurate
+- Emotional states (place at the start of a sentence): [warm], [thoughtful], [curious], [surprised], [concerned], [impressed], [excited], [serious], [hopeful], [gentle], [sad]
+- Physical actions (place inline, on their own before a phrase): [sighs], [laughs softly], [giggles], [whispers], [clears throat], [pauses]
+- Aim for 2-4 cues total for a clip of this length — mix emotional and action types; never stack two cues back to back
+- Cues must genuinely match the moment — do not use [excited] for something sombre or [giggles] in a serious moment
 - Plain text only — no markdown, no bullet points, no quotation marks
 - Do not begin with "In this clip", "Here we see", or "This clip shows"`;
 
@@ -214,7 +218,14 @@ Current script:
 
 User instruction: "${instruction}"
 
-Rewrite the script applying the instruction. Keep the same approximate length unless told otherwise. Maintain the natural spoken-language style with short sentences, conversational rhythm, and bracketed emotion cues where appropriate (e.g. [thoughtful], [surprised], [curious]). Return only the revised script text with no extra commentary.`;
+Rewrite the script applying the instruction. Keep the same approximate length unless told otherwise. Maintain the natural spoken-language style with short sentences and conversational rhythm.
+
+Bracketed expression cues shape TTS delivery — preserve and refine them as you edit:
+- Emotional states (start of a sentence): [warm], [thoughtful], [curious], [surprised], [concerned], [impressed], [excited], [serious], [hopeful], [gentle], [sad]
+- Physical actions (inline, before a phrase): [sighs], [laughs softly], [giggles], [whispers], [clears throat], [pauses]
+- Never stack two cues back to back; cues must match the tone of what follows.
+
+Return only the revised script text with no extra commentary.`;
 
   const response = await client.chat.completions.create({
     model: "gpt-5.2",
@@ -339,7 +350,11 @@ Writing style requirements — this will be read aloud by TTS, so:
 - Use natural spoken rhythm — the way a person actually talks, not formal writing
 - Use commas to create natural breathing pauses
 - Vary sentence length — mix short punchy sentences with slightly longer ones
-- Sprinkle bracketed emotion cues throughout (e.g. [thoughtful], [surprised], [sigh], [excited], [curious], [concerned], [impressed], [warm], [serious]) to make the delivery feel natural — place them at the start of a sentence or just before a key phrase; the emotion must genuinely match the sentiment of what is being said
+- Use bracketed expression cues throughout to shape TTS delivery — ElevenLabs reads these directly, so they must fit the moment exactly
+- Emotional states (start of a sentence): [warm], [thoughtful], [curious], [surprised], [concerned], [impressed], [excited], [serious], [hopeful], [gentle], [sad]
+- Physical actions (inline, before a phrase or on their own): [sighs], [laughs softly], [giggles], [whispers], [clears throat], [pauses]
+- Aim for roughly one cue every 3-5 sentences — vary between emotional and action types; never stack two cues back to back
+- The cue must genuinely match the tone of what follows — wrong-tone cues break the illusion of natural speech
 - No markdown, no bullet points, no headers, no speaker labels
 - Approximately 1200-1800 words total`;
 
