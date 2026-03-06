@@ -3,7 +3,8 @@ import { useParams, useLocation } from 'react-router-dom'
 import { EditorTopNav } from '../components/EditorTopNav'
 import { VideoPlayer } from '../components/VideoPlayer'
 import type { VideoPlayerHandle } from '../components/VideoPlayer'
-import { SourceTimeline } from '../components/SourceTimeline'
+import { ClipScrubber } from '../components/ClipScrubber'
+import { ClipReel } from '../components/ClipReel'
 import { FindClipsPanel } from '../components/FindClipsPanel'
 import { InsightsPanel } from '../components/InsightsPanel'
 import { NarrationPanel, VOICES } from '../components/NarrationPanel'
@@ -33,24 +34,30 @@ import { useJobPoller } from '../hooks/useJobPoller'
 // ─── Overlap resolution ───────────────────────────────────────────────────────
 
 /**
- * Given a sorted list of clips, trims each clip so it ends exactly where the
- * next one begins. Used only for the initial load of detected clips.
+ * Trims clips that overlap the next one (by start time) so they don't conflict
+ * in assembly. Preserves the original API order (Twelve Labs relevance order).
  */
-function makeAdjacent(clips: EditorClip[]): EditorClip[] {
+function trimOverlaps(clips: EditorClip[]): EditorClip[] {
+  // Work on a start-time-sorted copy just for overlap resolution
   const sorted = [...clips].sort((a, b) => a.start - b.start)
-  const result: EditorClip[] = []
+  const trimmed: EditorClip[] = []
   for (const clip of sorted) {
-    if (result.length > 0) {
-      const prev = result[result.length - 1]
+    if (trimmed.length > 0) {
+      const prev = trimmed[trimmed.length - 1]
       const prevEnd = prev.start + prev.duration
       if (clip.start < prevEnd) {
         prev.duration = clip.start - prev.start
-        if (prev.duration < 2) result.pop()
+        if (prev.duration < 2) trimmed.pop()
       }
     }
-    result.push({ ...clip })
+    trimmed.push({ ...clip })
   }
-  return result.map((c, i) => ({ ...c, sceneLabel: `Scene ${i + 1}` }))
+  // Rebuild scene labels in relevance order (restore original API ordering)
+  const trimmedByIndex = new Map(trimmed.map(c => [c.index, c]))
+  return clips
+    .map(c => trimmedByIndex.get(c.index))
+    .filter((c): c is EditorClip => c !== undefined)
+    .map((c, i) => ({ ...c, sceneLabel: `Scene ${i + 1}` }))
 }
 
 /**
@@ -58,7 +65,13 @@ function makeAdjacent(clips: EditorClip[]): EditorClip[] {
  * If the desired position overlaps existing clips, the new clip is shifted
  * forward (in source-video time) until it fits — preserving all existing clips.
  */
-function insertClipNoOverlap(clips: EditorClip[], result: SearchResult, nextIndex: number): EditorClip[] {
+function insertClipNoOverlap(
+  clips: EditorClip[],
+  result: SearchResult,
+  nextIndex: number,
+  fallbackSourceUrl?: string | null,
+  fallbackSourceDuration?: number,
+): EditorClip[] {
   const sorted = [...clips].sort((a, b) => a.start - b.start)
 
   // Walk sorted clips; push placedStart forward past any overlap
@@ -79,9 +92,12 @@ function insertClipNoOverlap(clips: EditorClip[], result: SearchResult, nextInde
     confidence: result.confidence,
     thumbnailUrl: result.thumbnailUrl,
     selected: true,
+    sourceVideoUrl: result.sourceVideoUrl ?? fallbackSourceUrl ?? undefined,
+    sourceDuration: result.sourceDuration ?? fallbackSourceDuration ?? undefined,
   }
 
-  const all = [...sorted, newClip].sort((a, b) => a.start - b.start)
+  // Append new clip and re-label in insertion order (new clip goes to end)
+  const all = [...clips, newClip]
   return all.map((c, i) => ({ ...c, sceneLabel: `Scene ${i + 1}` }))
 }
 
@@ -107,7 +123,6 @@ export function EditorPage() {
   const [sourceVideoUrl, setSourceVideoUrl] = useState<string | null>(null)
   const [sourceDuration, setSourceDuration] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [timelineVisible, setTimelineVisible] = useState(true)
   const [activePanel, setActivePanel] = useState<ActivePanel>(null)
   const [addedResultIds, setAddedResultIds] = useState<Set<string>>(new Set())
   const [showShareModal, setShowShareModal] = useState(false)
@@ -179,26 +194,34 @@ export function EditorPage() {
     if (jobId === 'demo') return
     fetchJob(jobId)
       .then(data => {
+        const jobSourceUrl = data.sourceVideoUrl ?? `/api/output/${jobId}/source`
+        const jobSourceDuration = data.sourceDuration ?? 0
         if (data.editorClips?.length) {
-          let adjacent = makeAdjacent(data.editorClips.slice(0, 5))
+          let clips = trimOverlaps(
+            data.editorClips.slice(0, 5).map((c: EditorClip) => ({
+              ...c,
+              sourceVideoUrl: c.sourceVideoUrl ?? jobSourceUrl,
+              sourceDuration: c.sourceDuration ?? jobSourceDuration,
+            })),
+          )
           // Restore persisted clip edits (selections + boundary trims)
           try {
             const saved = localStorage.getItem(`insightcuts-clips-${jobId}`)
             if (saved) {
               const savedMap = JSON.parse(saved) as Record<string, { selected: boolean; start: number; duration: number }>
-              adjacent = adjacent.map(c => {
+              clips = clips.map((c: EditorClip) => {
                 const s = savedMap[c.index]
                 return s ? { ...c, selected: s.selected, start: s.start, duration: s.duration } : c
               })
             }
           } catch { /* ignore corrupted data */ }
-          setClips(adjacent)
-          nextClipIndex.current = adjacent.length
+          setClips(clips)
+          nextClipIndex.current = clips.length
         }
-        if (data.sourceDuration) {
-          setSourceDuration(data.sourceDuration)
+        if (jobSourceDuration) {
+          setSourceDuration(jobSourceDuration)
         }
-        setSourceVideoUrl(data.sourceVideoUrl ?? `/api/output/${jobId}/source`)
+        setSourceVideoUrl(jobSourceUrl)
       })
       .catch(err => console.error('[EditorPage] fetchJob failed:', err))
   }, [jobId])
@@ -266,13 +289,13 @@ export function EditorPage() {
     setAddedResultIds(prev => new Set([...prev, result.tempId]))
     const newIndex = nextClipIndex.current++
     setClips(prev => {
-      const updated = insertClipNoOverlap(prev, result, newIndex)
+      const updated = insertClipNoOverlap(prev, result, newIndex, sourceVideoUrl, sourceDuration)
       console.log('[AddResult] clips after insert:', updated.length, 'new clip index:', newIndex)
       const idx = updated.findIndex(c => c.index === newIndex)
       if (idx !== -1) setSelectedIndex(idx)
       return updated
     })
-  }, [])
+  }, [sourceVideoUrl, sourceDuration])
 
   // ── Insights handlers ───────────────────────────────────────────────────────
 
@@ -639,46 +662,24 @@ export function EditorPage() {
             )}
 
             <div style={{ flex: 1 }} />
-
-            <button
-              onClick={() => setTimelineVisible(v => !v)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 13,
-                color: '#888',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="none"
-                style={{ transform: timelineVisible ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
-              >
-                <path d="M2 4L6 8L10 4" stroke="#888" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {timelineVisible ? 'Hide timeline' : 'Show timeline'}
-            </button>
           </div>
 
-          {timelineVisible && (
-            <SourceTimeline
-              clips={clips}
-              sourceDuration={sourceDuration}
-              selectedIndex={selectedIndex}
+          {selectedClip && (
+            <ClipScrubber
+              clip={selectedClip}
+              allClips={clips}
               playheadPct={playheadPct}
-              sourceVideoUrl={sourceVideoUrl}
-              onSelectClip={handleSelectClip}
-              onResizeClip={handleResizeClip}
+              onResizeClip={(newStart, newDuration) => handleResizeClip(selectedIndex, newStart, newDuration)}
               onSeek={handleSeek}
-              onToggleClipSelected={handleToggleClipSelected}
             />
           )}
+
+          <ClipReel
+            clips={clips}
+            selectedIndex={selectedIndex}
+            onSelectClip={handleSelectClip}
+            onToggleClipSelected={handleToggleClipSelected}
+          />
 
         </div>
 

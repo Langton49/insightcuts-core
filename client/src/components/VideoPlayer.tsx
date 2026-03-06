@@ -101,7 +101,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, Props>(
         ) : (
           <div className={styles.placeholder}>No clip selected</div>
         )}
-        <div className={styles.hint}>Click scenes in the timeline below to navigate</div>
+        <div className={styles.hint}>Select a clip card below to navigate</div>
       </div>
     )
   },

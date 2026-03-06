@@ -224,6 +224,7 @@ app.get("/api/indexed-videos", (_req, res) => {
     });
   }
 
+  res.set('Cache-Control', 'no-store');
   res.json({ videos: result });
 });
 

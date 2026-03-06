@@ -1,0 +1,128 @@
+.container {
+  background: #111;
+  border-top: 1px solid #252525;
+  padding: 8px 14px 4px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.trackRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeLabel {
+  font-size: 11px;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 36px;
+}
+
+.track {
+  position: relative;
+  flex: 1;
+  height: 32px;
+  background: #1e1e1e;
+  border-radius: 4px;
+  overflow: visible;
+  cursor: pointer;
+}
+
+/* Shaded regions outside the clip */
+.preRegion,
+.postRegion {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #1a1a1a;
+  pointer-events: none;
+}
+
+/* Clip segment */
+.segment {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+.segmentFill {
+  flex: 1;
+  background: rgba(232, 93, 38, 0.35);
+  border-top: 2px solid #e85d26;
+  border-bottom: 2px solid #e85d26;
+  pointer-events: none;
+}
+
+/* Drag handles */
+.handleLeft,
+.handleRight {
+  width: 8px;
+  flex-shrink: 0;
+  background: #e85d26;
+  cursor: col-resize;
+  border-radius: 2px 0 0 2px;
+  position: relative;
+  z-index: 2;
+  transition: background 0.1s;
+}
+
+.handleLeft:hover,
+.handleRight:hover {
+  background: #ff7040;
+}
+
+.handleRight {
+  border-radius: 0 2px 2px 0;
+}
+
+/* Handle grip lines */
+.handleLeft::after,
+.handleRight::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 1px;
+}
+
+/* Playhead */
+.playhead {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: #fff;
+  pointer-events: none;
+  z-index: 3;
+  transform: translateX(-50%);
+}
+
+.playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* Source duration label */
+.totalDuration {
+  text-align: right;
+  font-size: 10px;
+  color: #3a3a3a;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,143 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 108px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: #1c1c1c;
+  transition: border-color 0.15s, opacity 0.15s;
+  user-select: none;
+}
+
+.card:hover {
+  border-color: #444;
+}
+
+.active {
+  border-color: #e85d26 !important;
+}
+
+.deselected {
+  opacity: 0.45;
+}
+
+/* Thumbnail */
+.thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #2a2a2a;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+}
+
+/* Deselected dim overlay */
+.deselectedOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Scene label */
+.label {
+  padding: 5px 8px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bottom meta row */
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 8px 8px;
+  gap: 4px;
+}
+
+.duration {
+  font-size: 10px;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
+.confidence {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.confidenceHigh {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+}
+
+.confidenceMed {
+  background: rgba(234, 179, 8, 0.18);
+  color: #facc15;
+}
+
+.confidenceLow {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+/* Include/exclude toggle button */
+.toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: background 0.15s;
+}
+
+.toggleOn {
+  background: #e85d26;
+  color: #fff;
+}
+
+.toggleOn:hover {
+  background: #cf4d1c;
+}
+
+.toggleOff {
+  background: #333;
+  color: #888;
+}
+
+.toggleOff:hover {
+  background: #444;
+  color: #bbb;
+}

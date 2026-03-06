@@ -55,6 +55,8 @@ export interface EditorClip {
   thumbnailUrl?: string
   selected: boolean
   layoutStyle?: LayoutStyle // per-clip override; undefined = use global layout
+  sourceVideoUrl?: string   // URL of the source video this clip was cut from
+  sourceDuration?: number   // total duration of the source video (for scrubber bounds)
 }
 
 export interface SearchResult {
@@ -63,6 +65,8 @@ export interface SearchResult {
   duration: number        // clip duration
   confidence: string
   thumbnailUrl?: string
+  sourceVideoUrl?: string // URL of the source video this result came from
+  sourceDuration?: number // total duration of that source video
 }
 
 export interface SceneScript {

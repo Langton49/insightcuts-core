@@ -66,7 +66,7 @@ export function WorkspacePage() {
   const [showModal, setShowModal] = useState(() => !loadSavedProject())
   const [videos, setVideos] = useState<UploadedVideo[]>([])
   const [indexedVideos, setIndexedVideos] = useState<IndexedVideo[]>([])
-  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0) // 0 = idle, 1-100 = uploading
   const [jobState, setJobState] = useState<JobState>(INITIAL_JOB)
   const [query, setQuery] = useState('')
 
@@ -110,12 +110,12 @@ export function WorkspacePage() {
   }, [])
 
   const handleUpload = useCallback(async (file: File) => {
-    setUploading(true)
+    setUploadProgress(1)
     try {
       const previewUrl = URL.createObjectURL(file)
       const [duration, uploaded] = await Promise.all([
         getVideoDuration(previewUrl),
-        uploadFile(file),
+        uploadFile(file, pct => setUploadProgress(pct)),
       ])
       setVideos(prev => [
         ...prev,
@@ -132,7 +132,7 @@ export function WorkspacePage() {
     } catch (err) {
       console.error('[WorkspacePage] upload failed:', err)
     } finally {
-      setUploading(false)
+      setUploadProgress(0)
     }
   }, [])
 
@@ -230,7 +230,7 @@ export function WorkspacePage() {
             <LeftSidebar
               projectName={project.name}
               videos={videos}
-              uploading={uploading}
+              uploadProgress={uploadProgress}
               onUpload={handleUpload}
               onToggleVideo={handleToggleVideo}
               indexedVideos={indexedVideos}

@@ -5,7 +5,7 @@ import styles from './LeftSidebar.module.css'
 interface Props {
   projectName: string
   videos: UploadedVideo[]
-  uploading: boolean
+  uploadProgress: number
   onUpload: (file: File) => void
   onToggleVideo: (fileId: string) => void
   indexedVideos?: IndexedVideo[]
@@ -18,7 +18,7 @@ function formatDuration(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-export function LeftSidebar({ projectName, videos, uploading, onUpload, onToggleVideo, indexedVideos, onToggleIndexedVideo }: Props) {
+export function LeftSidebar({ projectName, videos, uploadProgress, onUpload, onToggleVideo, indexedVideos, onToggleIndexedVideo }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleDrop = useCallback(
@@ -51,7 +51,7 @@ export function LeftSidebar({ projectName, videos, uploading, onUpload, onToggle
       {/* Upload dropzone */}
       <div
         className={styles.uploadZone}
-        onClick={() => !uploading && inputRef.current?.click()}
+        onClick={() => !uploadProgress && inputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
         role="button"
@@ -65,8 +65,13 @@ export function LeftSidebar({ projectName, videos, uploading, onUpload, onToggle
           hidden
           onChange={handleFileChange}
         />
-        {uploading ? (
-          <span className={styles.uploadingText}>Uploading…</span>
+        {uploadProgress > 0 ? (
+          <div className={styles.uploadingState}>
+            <span className={styles.uploadingText}>Uploading… {uploadProgress}%</span>
+            <div className={styles.progressBar}>
+              <div className={styles.progressFill} style={{ width: `${uploadProgress}%` }} />
+            </div>
+          </div>
         ) : (
           <>
             <svg

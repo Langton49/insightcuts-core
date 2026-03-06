@@ -1,0 +1,27 @@
+.reel {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 10px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #161616;
+  border-top: 1px solid #252525;
+  flex-shrink: 0;
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+.reel::-webkit-scrollbar {
+  height: 4px;
+}
+
+.reel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.reel::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 2px;
+}

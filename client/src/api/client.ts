@@ -93,10 +93,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export function uploadFile(file: File): Promise<UploadResponse> {
-  const form = new FormData()
-  form.append('file', file)
-  return request<UploadResponse>('/upload', { method: 'POST', body: form })
+export function uploadFile(file: File, onProgress?: (pct: number) => void): Promise<UploadResponse> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData()
+    form.append('file', file)
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${BASE}/upload`)
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100))
+    })
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText) as UploadResponse) }
+        catch { reject(new Error('Invalid JSON response')) }
+      } else {
+        reject(new Error(xhr.responseText || xhr.statusText))
+      }
+    })
+    xhr.addEventListener('error', () => reject(new Error('Network error during upload')))
+    xhr.addEventListener('abort', () => reject(new Error('Upload aborted')))
+    xhr.send(form)
+  })
 }
 
 export function runDetection(req: RunDetectionRequest): Promise<{ jobId: string }> {
