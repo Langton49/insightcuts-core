@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import pdfParse from "pdf-parse";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import mammoth from "mammoth";
 
 const MAX_CHARS = 12_000;
