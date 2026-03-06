@@ -808,19 +808,25 @@ export async function generateInsightCard(
         .inputOptions(['-loop', '1', '-framerate', '30'])
 
       if (narrationPath) {
-        // Narration audio: pad with silence if shorter than card, trim if longer
+        // Narration audio: pad with silence if shorter than card, trim if longer.
+        // Video filters must go into the same complexFilter — FFmpeg rejects mixing
+        // -filter_complex with -vf in the same command.
+        const vfChain = filters.join(",");
         cmd
           .input(narrationPath)
-          .complexFilter([`[1:a]apad,atrim=duration=${durationSeconds}[aout]`])
-          .outputOptions(["-map 0:v", "-map [aout]"])
+          .complexFilter([
+            `[0:v]${vfChain}[vout]`,
+            `[1:a]apad,atrim=duration=${durationSeconds}[aout]`,
+          ])
+          .outputOptions(["-map [vout]", "-map [aout]"])
       } else {
         cmd
           .input(SILENCE_SRC)
           .inputOptions(SILENCE_OPTS)
+          .videoFilters(filters)
       }
 
       cmd
-        .videoFilters(filters)
         .videoCodec("libx264")
         .audioCodec("aac")
         .outputOptions(["-preset fast", "-t", String(durationSeconds)])
