@@ -56,6 +56,9 @@ function computeWalls(
 export function ClipScrubber({ clip, allClips, playheadPct, onResizeClip, onSeek }: Props) {
   const trackRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
+  // Stable ref so the mousemove effect never needs to re-register during drag
+  const onResizeClipRef = useRef(onResizeClip)
+  onResizeClipRef.current = onResizeClip
 
   const sourceDuration = clip.sourceDuration ?? 0
 
@@ -108,13 +111,13 @@ export function ClipScrubber({ clip, allClips, playheadPct, onResizeClip, onSeek
           drag.leftWall,
           Math.min(fixedEnd - MIN_DURATION, drag.originalStart + deltaSeconds),
         )
-        onResizeClip(newStart, fixedEnd - newStart)
+        onResizeClipRef.current(newStart, fixedEnd - newStart)
       } else {
         const newDuration = Math.max(
           MIN_DURATION,
           Math.min(drag.rightWall - drag.originalStart, drag.originalDuration + deltaSeconds),
         )
-        onResizeClip(drag.originalStart, newDuration)
+        onResizeClipRef.current(drag.originalStart, newDuration)
       }
     }
 
@@ -128,7 +131,7 @@ export function ClipScrubber({ clip, allClips, playheadPct, onResizeClip, onSeek
       document.removeEventListener('mousemove', onMouseMove)
       document.removeEventListener('mouseup', onMouseUp)
     }
-  }, [onResizeClip])
+  }, []) // empty deps — onResizeClipRef.current is always current without re-registering
 
   const handleTrackClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

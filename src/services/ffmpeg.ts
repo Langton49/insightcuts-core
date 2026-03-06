@@ -2,9 +2,51 @@ import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
 import { execFileSync } from "child_process";
+import { deflateSync } from "zlib";
 // @ts-ignore — no bundled types
 import ffmpegStatic from "ffmpeg-static";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
+
+// ─── Solid-colour PNG helper (avoids lavfi virtual device requirement) ────────
+
+function crc32(buf: Buffer): number {
+  const table: number[] = []
+  for (let i = 0; i < 256; i++) {
+    let c = i
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1)
+    table.push(c)
+  }
+  let crc = 0xFFFFFFFF
+  for (let i = 0; i < buf.length; i++) crc = table[(crc ^ buf[i]!) & 0xFF]! ^ (crc >>> 8)
+  return (crc ^ 0xFFFFFFFF) >>> 0
+}
+
+/** Writes a 1×1 solid-colour PNG to `filePath`. Used instead of lavfi `color=` source. */
+function writeSolidColorPng(r: number, g: number, b: number, filePath: string): void {
+  const ihdrData = Buffer.allocUnsafe(13)
+  ihdrData.writeUInt32BE(1, 0); ihdrData.writeUInt32BE(1, 4)
+  ihdrData[8] = 8; ihdrData[9] = 2; ihdrData[10] = 0; ihdrData[11] = 0; ihdrData[12] = 0
+  const idatData = deflateSync(Buffer.from([0, r, g, b]))
+
+  function chunk(type: string, data: Buffer): Buffer {
+    const t = Buffer.from(type, 'ascii')
+    const lenBuf = Buffer.allocUnsafe(4); lenBuf.writeUInt32BE(data.length)
+    const crcBuf = Buffer.allocUnsafe(4); crcBuf.writeUInt32BE(crc32(Buffer.concat([t, data])))
+    return Buffer.concat([lenBuf, t, data, crcBuf])
+  }
+
+  const png = Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk('IHDR', ihdrData),
+    chunk('IDAT', idatData),
+    chunk('IEND', Buffer.alloc(0)),
+  ])
+  fs.writeFileSync(filePath, png)
+}
+
+/** Silent raw-PCM audio source available on Linux without lavfi. */
+const SILENCE_SRC = '/dev/zero'
+const SILENCE_OPTS = ['-f', 's16le', '-ar', '44100', '-ac', '2']
 
 // ─── Binary paths ─────────────────────────────────────────────────────────────
 
@@ -149,7 +191,7 @@ export function addLowerThird(
 
 // ─── Title / outro cards ──────────────────────────────────────────────────────
 
-export function generateTitleCard(
+export async function generateTitleCard(
   outputPath: string,
   title: string,
   subtitle: string,
@@ -160,29 +202,36 @@ export function generateTitleCard(
   const safeTitle = title.replace(/'/g, "\\'").replace(/:/g, "\\:").slice(0, 80);
   const safeSub = subtitle.replace(/'/g, "\\'").replace(/:/g, "\\:").slice(0, 120);
 
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(`color=c=0x000E24:size=1280x720:duration=${durationSeconds}:rate=30`)
-      .inputFormat("lavfi")
-      .input("anullsrc=channel_layout=stereo:sample_rate=44100")
-      .inputFormat("lavfi")
-      .videoFilters([
-        "drawbox=x=80:y=280:w=1120:h=4:color=0x003478:t=fill",
-        `drawtext=text='${safeTitle}':fontsize=54:fontcolor=white:x=(w-tw)/2:y=200`,
-        `drawtext=text='${safeSub}':fontsize=28:fontcolor=0xC8D3E0:x=(w-tw)/2:y=320`,
-        "drawtext=text='InsightCuts':fontsize=18:fontcolor=0x4DA3FF:x=(w-tw)/2:y=560",
-      ])
-      .videoCodec("libx264")
-      .audioCodec("aac")
-      .outputOptions(["-preset fast", "-t", String(durationSeconds)])
-      .output(outputPath)
-      .on("end", () => resolve())
-      .on("error", reject)
-      .run();
-  });
+  const tmpPng = `${outputPath}.bg.png`
+  writeSolidColorPng(0x00, 0x0E, 0x24, tmpPng)
+  try {
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg()
+        .input(tmpPng)
+        .inputOptions(['-loop', '1', '-framerate', '30'])
+        .input(SILENCE_SRC)
+        .inputOptions(SILENCE_OPTS)
+        .videoFilters([
+          'scale=1280:720:flags=neighbor,setsar=1',
+          "drawbox=x=80:y=280:w=1120:h=4:color=0x003478:t=fill",
+          `drawtext=text='${safeTitle}':fontsize=54:fontcolor=white:x=(w-tw)/2:y=200`,
+          `drawtext=text='${safeSub}':fontsize=28:fontcolor=0xC8D3E0:x=(w-tw)/2:y=320`,
+          "drawtext=text='InsightCuts':fontsize=18:fontcolor=0x4DA3FF:x=(w-tw)/2:y=560",
+        ])
+        .videoCodec("libx264")
+        .audioCodec("aac")
+        .outputOptions(["-preset fast", "-t", String(durationSeconds)])
+        .output(outputPath)
+        .on("end", () => resolve())
+        .on("error", reject)
+        .run()
+    })
+  } finally {
+    fs.rmSync(tmpPng, { force: true })
+  }
 }
 
-export function generateOutroCard(
+export async function generateOutroCard(
   outputPath: string,
   momentCount: number,
   totalDurationSeconds: number,
@@ -194,25 +243,32 @@ export function generateOutroCard(
   const s = Math.floor(totalDurationSeconds % 60);
   const durationStr = `${m}m ${s}s`;
 
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(`color=c=0x000E24:size=1280x720:duration=${durationSeconds}:rate=30`)
-      .inputFormat("lavfi")
-      .input("anullsrc=channel_layout=stereo:sample_rate=44100")
-      .inputFormat("lavfi")
-      .videoFilters([
-        "drawbox=x=80:y=300:w=1120:h=2:color=0x003478:t=fill",
-        `drawtext=text='${momentCount} Insight Moments · ${durationStr}':fontsize=36:fontcolor=white:x=(w-tw)/2:y=230`,
-        "drawtext=text='Prepared with InsightCuts':fontsize=22:fontcolor=0xC8D3E0:x=(w-tw)/2:y=320",
-      ])
-      .videoCodec("libx264")
-      .audioCodec("aac")
-      .outputOptions(["-preset fast", "-t", String(durationSeconds)])
-      .output(outputPath)
-      .on("end", () => resolve())
-      .on("error", reject)
-      .run();
-  });
+  const tmpPng = `${outputPath}.bg.png`
+  writeSolidColorPng(0x00, 0x0E, 0x24, tmpPng)
+  try {
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg()
+        .input(tmpPng)
+        .inputOptions(['-loop', '1', '-framerate', '30'])
+        .input(SILENCE_SRC)
+        .inputOptions(SILENCE_OPTS)
+        .videoFilters([
+          'scale=1280:720:flags=neighbor,setsar=1',
+          "drawbox=x=80:y=300:w=1120:h=2:color=0x003478:t=fill",
+          `drawtext=text='${momentCount} Insight Moments · ${durationStr}':fontsize=36:fontcolor=white:x=(w-tw)/2:y=230`,
+          "drawtext=text='Prepared with InsightCuts':fontsize=22:fontcolor=0xC8D3E0:x=(w-tw)/2:y=320",
+        ])
+        .videoCodec("libx264")
+        .audioCodec("aac")
+        .outputOptions(["-preset fast", "-t", String(durationSeconds)])
+        .output(outputPath)
+        .on("end", () => resolve())
+        .on("error", reject)
+        .run()
+    })
+  } finally {
+    fs.rmSync(tmpPng, { force: true })
+  }
 }
 
 // ─── Frame extraction ─────────────────────────────────────────────────────────
@@ -726,21 +782,27 @@ async function generateInsightCard(
     `drawtext=text='InsightCuts':fontsize=${m.fsLabel}:fontcolor=0x4DA3FF:x=${VW - Math.round(VW * 0.1)}:y=${VH - Math.round(VH * 0.05)}`,
   ];
 
-  return new Promise((resolve, reject) => {
-    ffmpeg()
-      .input(`color=c=0x000E24:size=${VW}x${VH}:duration=${durationSeconds}:rate=30`)
-      .inputFormat("lavfi")
-      .input("anullsrc=channel_layout=stereo:sample_rate=44100")
-      .inputFormat("lavfi")
-      .videoFilters(filters)
-      .videoCodec("libx264")
-      .audioCodec("aac")
-      .outputOptions(["-preset fast", "-t", String(durationSeconds)])
-      .output(outputPath)
-      .on("end", () => resolve())
-      .on("error", reject)
-      .run();
-  });
+  const tmpPng = `${outputPath}.bg.png`
+  writeSolidColorPng(0x00, 0x0E, 0x24, tmpPng)
+  try {
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg()
+        .input(tmpPng)
+        .inputOptions(['-loop', '1', '-framerate', '30'])
+        .input(SILENCE_SRC)
+        .inputOptions(SILENCE_OPTS)
+        .videoFilters([`scale=${VW}:${VH}:flags=neighbor,setsar=1`, ...filters])
+        .videoCodec("libx264")
+        .audioCodec("aac")
+        .outputOptions(["-preset fast", "-t", String(durationSeconds)])
+        .output(outputPath)
+        .on("end", () => resolve())
+        .on("error", reject)
+        .run()
+    })
+  } finally {
+    fs.rmSync(tmpPng, { force: true })
+  }
 }
 
 /**

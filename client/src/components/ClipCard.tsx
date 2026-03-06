@@ -48,7 +48,9 @@ export function ClipCard({ clip, isActive, onSelect, onToggleSelected }: Props) 
       {/* Bottom row: duration + confidence */}
       <div className={styles.meta}>
         <span className={styles.duration}>{formatDuration(clip.duration)}</span>
-        <span className={`${styles.confidence} ${confidenceClass}`}>{clip.confidence}</span>
+        {(clip.confidence === 'high' || clip.confidence === 'medium' || clip.confidence === 'low') && (
+          <span className={`${styles.confidence} ${confidenceClass}`}>{clip.confidence}</span>
+        )}
       </div>
 
       {/* Include/exclude toggle */}

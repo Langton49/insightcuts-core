@@ -5,12 +5,11 @@
   padding: 10px 14px;
   overflow-x: auto;
   overflow-y: hidden;
-  background: #161616;
-  border-top: 1px solid #252525;
+  background: #fff;
+  border-top: 1px solid #e8e8e8;
   flex-shrink: 0;
-  /* Custom scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: #ddd transparent;
 }
 
 .reel::-webkit-scrollbar {
@@ -22,6 +21,6 @@
 }
 
 .reel::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #ddd;
   border-radius: 2px;
 }
