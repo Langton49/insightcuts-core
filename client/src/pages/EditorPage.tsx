@@ -198,7 +198,7 @@ export function EditorPage() {
         const jobSourceDuration = data.sourceDuration ?? 0
         if (data.editorClips?.length) {
           let clips = trimOverlaps(
-            data.editorClips.slice(0, 5).map((c: EditorClip) => ({
+            data.editorClips.slice(0, 10).map((c: EditorClip) => ({
               ...c,
               sourceVideoUrl: c.sourceVideoUrl ?? jobSourceUrl,
               sourceDuration: c.sourceDuration ?? jobSourceDuration,
