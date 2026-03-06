@@ -287,7 +287,7 @@ export async function runAssembly(
       }
 
       console.log(`  [${i + 1}/${clips.length}] Generating audio (${script.split(/\s+/).length} words)...`);
-      await generateAudio(script, narrationPath, config.narrationVoice);
+      await generateAudio(script, narrationPath);
 
       const narrationDuration = await getVideoDuration(narrationPath).catch(() => clip.clipDuration);
       let finalClipDuration = clip.clipDuration;
@@ -402,7 +402,7 @@ export async function runAssembly(
 
     podcastPath = path.join(outputDir, "podcast.mp3");
     console.log(`  Generating podcast audio (${podcastScript.split(/\s+/).length} words)...`);
-    await generateAudio(podcastScript, podcastPath, config.narrationVoice);
+    await generateAudio(podcastScript, podcastPath);
 
     // Wrap podcast with 5s music intro and outro
     if (fs.existsSync(PODCAST_INTRO_OUTRO_PATH)) {
