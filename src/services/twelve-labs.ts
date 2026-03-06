@@ -12,7 +12,7 @@ interface VideoCacheEntry {
   hlsUrl: string | null;
 }
 
-const VIDEO_CACHE_PATH = path.resolve("./uploads/.video-cache.json");
+const VIDEO_CACHE_PATH = path.resolve(process.env.UPLOADS_DIR ?? "./uploads", ".video-cache.json");
 const videoCache = new Map<string, VideoCacheEntry>(); // `${indexId}:${sha256hex}` → entry
 
 function computeFileHash(filePath: string): Promise<string> {
